@@ -1,6 +1,8 @@
+
 "use client";
 
 import { useState, useMemo } from "react";
+import Image from "next/image";
 import { Search, Volume2, Sparkles, ArrowLeftRight, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -9,6 +11,7 @@ import { VOCABULARY } from "@/lib/data";
 import { vocabularyContextualizer } from "@/ai/flows/vocabulary-contextualizer-flow";
 import { translateDayakNgaju } from "@/ai/flows/dayak-ngaju-translator-flow";
 import { useToast } from "@/hooks/use-toast";
+import { PlaceHolderImages } from "@/lib/placeholder-images";
 
 export default function VocabularyPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -16,6 +19,7 @@ export default function VocabularyPage() {
   const [examples, setExamples] = useState<string[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
+  const logo = PlaceHolderImages.find(img => img.id === "logo-habaring-hurung");
 
   // Translator state
   const [translateText, setTranslateText] = useState("");
@@ -62,15 +66,27 @@ export default function VocabularyPage() {
   return (
     <div className="container mx-auto px-4 py-12">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
-        <div>
-          <h1 className="text-4xl font-headline font-bold mb-2">Ruang Kosakata</h1>
-          <p className="text-muted-foreground">Cari dan pelajari ribuan kata dalam Bahasa Dayak Ngaju.</p>
+        <div className="flex items-center gap-4">
+          {logo && (
+            <Image 
+              src={logo.imageUrl} 
+              alt={logo.description} 
+              width={60} 
+              height={60} 
+              className="object-contain"
+              data-ai-hint={logo.imageHint}
+            />
+          )}
+          <div>
+            <h1 className="text-4xl font-headline font-bold mb-2">Ruang Kosakata</h1>
+            <p className="text-muted-foreground">Cari dan pelajari ribuan kata dalam Bahasa Dayak Ngaju.</p>
+          </div>
         </div>
         <div className="relative w-full md:w-96">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
           <Input 
             placeholder="Cari kata (Dayak atau Indonesia)..." 
-            className="pl-10 rounded-full"
+            className="pl-10 rounded-full shadow-sm"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -84,7 +100,7 @@ export default function VocabularyPage() {
             {filteredVocab.map((item) => (
               <Card 
                 key={item.id} 
-                className={`cursor-pointer transition-all hover:border-primary ${activeWord?.id === item.id ? 'ring-2 ring-primary border-primary' : ''}`}
+                className={`cursor-pointer transition-all hover:border-primary shadow-sm ${activeWord?.id === item.id ? 'ring-2 ring-primary border-primary' : ''}`}
                 onClick={() => {
                   setActiveWord(item);
                   setExamples([]);
@@ -111,7 +127,7 @@ export default function VocabularyPage() {
             ))}
           </div>
           {filteredVocab.length === 0 && (
-            <div className="text-center py-12 text-muted-foreground">
+            <div className="text-center py-12 text-muted-foreground bg-white rounded-3xl border border-dashed">
               Kata tidak ditemukan. Coba kata lain!
             </div>
           )}
@@ -120,7 +136,7 @@ export default function VocabularyPage() {
         {/* Translation & AI Helper */}
         <div className="space-y-6">
           {/* AI Translator */}
-          <Card className="shadow-lg border-none bg-orange-50/50">
+          <Card className="shadow-lg border-none bg-primary/5">
             <CardContent className="p-6 space-y-4">
               <div className="flex items-center justify-between mb-2">
                 <h2 className="font-headline font-bold text-xl flex items-center gap-2">
@@ -130,13 +146,14 @@ export default function VocabularyPage() {
                 <Button 
                   variant="ghost" 
                   size="icon"
+                  className="hover:bg-primary/10"
                   onClick={() => setTargetLang(prev => prev === "dayak-ngaju" ? "indonesian" : "dayak-ngaju")}
                 >
                   <ArrowLeftRight className="w-4 h-4" />
                 </Button>
               </div>
               
-              <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
+              <div className="text-xs font-bold text-primary uppercase tracking-wider mb-2">
                 {targetLang === "dayak-ngaju" ? "Indonesia → Dayak Ngaju" : "Dayak Ngaju → Indonesia"}
               </div>
 
@@ -145,9 +162,10 @@ export default function VocabularyPage() {
                   placeholder="Masukkan kalimat..." 
                   value={translateText}
                   onChange={(e) => setTranslateText(e.target.value)}
+                  className="shadow-sm"
                 />
                 <Button 
-                  className="w-full" 
+                  className="w-full shadow-md" 
                   onClick={handleTranslate}
                   disabled={isTranslating}
                 >
@@ -157,9 +175,9 @@ export default function VocabularyPage() {
               </div>
 
               {translatedResult && (
-                <div className="mt-4 p-4 bg-white rounded-xl border border-primary/20">
-                  <p className="text-sm font-medium text-primary mb-1">Hasil:</p>
-                  <p className="text-lg">{translatedResult}</p>
+                <div className="mt-4 p-4 bg-white rounded-xl border border-primary/20 shadow-inner">
+                  <p className="text-sm font-bold text-primary mb-1">Hasil:</p>
+                  <p className="text-lg font-medium">{translatedResult}</p>
                 </div>
               )}
             </CardContent>
@@ -177,7 +195,7 @@ export default function VocabularyPage() {
                 {examples.length > 0 ? (
                   <ul className="space-y-3">
                     {examples.map((ex, i) => (
-                      <li key={i} className="p-3 bg-muted/30 rounded-lg text-sm italic border-l-4 border-primary">
+                      <li key={i} className="p-3 bg-primary/5 rounded-lg text-sm italic border-l-4 border-primary shadow-sm">
                         "{ex}"
                       </li>
                     ))}
@@ -185,7 +203,7 @@ export default function VocabularyPage() {
                 ) : (
                   <Button 
                     variant="outline" 
-                    className="w-full gap-2 border-primary text-primary"
+                    className="w-full gap-2 border-primary text-primary hover:bg-primary hover:text-white shadow-sm"
                     onClick={() => generateExamples(activeWord.ngaju, activeWord.indonesian)}
                     disabled={isGenerating}
                   >

@@ -4,25 +4,25 @@
 
 @layer base {
   :root {
-    --background: 35 40% 96%;
+    --background: 35 50% 95%; /* Cream */
     --foreground: 25 30% 10%;
-    --card: 35 50% 98%;
+    --card: 35 40% 98%;
     --card-foreground: 25 30% 10%;
-    --popover: 35 50% 98%;
+    --popover: 35 40% 98%;
     --popover-foreground: 25 30% 10%;
-    --primary: 25 40% 30%;
+    --primary: 25 40% 25%; /* Coklat Tua */
     --primary-foreground: 35 40% 98%;
     --secondary: 35 30% 90%;
     --secondary-foreground: 25 30% 20%;
     --muted: 35 15% 90%;
     --muted-foreground: 25 10% 40%;
-    --accent: 25 60% 45%;
+    --accent: 25 60% 40%; /* Coklat Aksen */
     --accent-foreground: 35 40% 98%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 35 20% 85%;
-    --input: 35 20% 85%;
-    --ring: 25 40% 30%;
+    --border: 25 20% 85%;
+    --input: 25 20% 85%;
+    --ring: 25 40% 25%;
     --radius: 1rem;
   }
 

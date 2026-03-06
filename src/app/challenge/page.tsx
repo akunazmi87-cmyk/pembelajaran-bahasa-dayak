@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { Trophy, CheckCircle2, XCircle, ArrowRight, RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { QUIZ_QUESTIONS } from "@/lib/data";
 import { cn } from "@/lib/utils";
+import { PlaceHolderImages } from "@/lib/placeholder-images";
 
 export default function ChallengePage() {
   const [currentStep, setCurrentStep] = useState(0);
@@ -16,6 +18,7 @@ export default function ChallengePage() {
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [fillValue, setFillValue] = useState("");
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
+  const logo = PlaceHolderImages.find(img => img.id === "logo-habaring-hurung");
 
   const question = QUIZ_QUESTIONS[currentStep];
   const progress = ((currentStep) / QUIZ_QUESTIONS.length) * 100;
@@ -65,13 +68,13 @@ export default function ChallengePage() {
 
     return (
       <div className="container mx-auto px-4 py-12 max-w-2xl text-center">
-        <div className="bg-card p-12 rounded-3xl shadow-xl border border-border space-y-8">
-          <div className="w-24 h-24 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto">
+        <div className="bg-card p-12 rounded-3xl shadow-2xl border border-border space-y-8">
+          <div className="w-24 h-24 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto shadow-inner">
             <Trophy className="w-12 h-12" />
           </div>
           <div className="space-y-2">
-            <h1 className="text-4xl font-headline font-bold">Tantangan Selesai!</h1>
-            <p className="text-xl text-muted-foreground">{message}</p>
+            <h1 className="text-4xl font-headline font-bold text-primary">Tantangan Selesai!</h1>
+            <p className="text-xl text-muted-foreground font-medium">{message}</p>
           </div>
           
           <div className="text-6xl font-bold text-primary">
@@ -79,10 +82,10 @@ export default function ChallengePage() {
           </div>
 
           <div className="space-y-4 pt-4">
-            <Button className="w-full h-12 text-lg rounded-full" onClick={resetQuiz}>
+            <Button className="w-full h-12 text-lg rounded-full shadow-md" onClick={resetQuiz}>
               <RefreshCcw className="mr-2 w-5 h-5" /> Ulangi Latihan
             </Button>
-            <Button variant="outline" className="w-full h-12 text-lg rounded-full" asChild>
+            <Button variant="outline" className="w-full h-12 text-lg rounded-full border-primary text-primary hover:bg-primary/5 shadow-sm" asChild>
               <a href="/">Kembali ke Beranda</a>
             </Button>
           </div>
@@ -93,18 +96,30 @@ export default function ChallengePage() {
 
   return (
     <div className="container mx-auto px-4 py-12 max-w-2xl">
-      <div className="mb-8 space-y-4">
-        <div className="flex justify-between items-center text-sm font-bold text-muted-foreground uppercase tracking-widest">
+      <div className="mb-8 space-y-4 text-center">
+        {logo && (
+          <div className="flex justify-center mb-4">
+            <Image 
+              src={logo.imageUrl} 
+              alt={logo.description} 
+              width={60} 
+              height={60} 
+              className="object-contain"
+              data-ai-hint={logo.imageHint}
+            />
+          </div>
+        )}
+        <div className="flex justify-between items-center text-sm font-bold text-primary uppercase tracking-widest">
           <span>Pertanyaan {currentStep + 1} dari {QUIZ_QUESTIONS.length}</span>
           <span>Skor: {score}</span>
         </div>
-        <Progress value={progress} className="h-2" />
+        <Progress value={progress} className="h-2 shadow-inner" />
       </div>
 
-      <Card className="shadow-xl border-none overflow-hidden">
+      <Card className="shadow-2xl border-none overflow-hidden bg-card">
         <div className="h-2 bg-primary" />
         <CardHeader className="p-8">
-          <CardTitle className="text-2xl font-headline leading-relaxed">
+          <CardTitle className="text-2xl font-headline leading-relaxed text-center text-primary">
             {question.question}
           </CardTitle>
         </CardHeader>
@@ -117,9 +132,9 @@ export default function ChallengePage() {
                   disabled={isCorrect !== null}
                   onClick={() => handleOptionSelect(option)}
                   className={cn(
-                    "p-4 rounded-xl border-2 text-left transition-all font-medium flex justify-between items-center",
-                    selectedOption === option ? "border-primary bg-primary/5 text-primary" : "border-muted hover:border-primary/50",
-                    isCorrect !== null && option === question.answer && "border-primary bg-primary/10 text-primary font-bold shadow-sm",
+                    "p-4 rounded-xl border-2 text-left transition-all font-bold flex justify-between items-center shadow-sm",
+                    selectedOption === option ? "border-primary bg-primary/5 text-primary" : "border-muted hover:border-primary/50 bg-white",
+                    isCorrect !== null && option === question.answer && "border-primary bg-primary/10 text-primary shadow-md",
                     isCorrect === false && selectedOption === option && option !== question.answer && "border-destructive bg-destructive/5 text-destructive"
                   )}
                 >
@@ -137,14 +152,14 @@ export default function ChallengePage() {
                 onChange={(e) => setFillValue(e.target.value)}
                 disabled={isCorrect !== null}
                 className={cn(
-                  "h-14 text-lg text-center font-bold",
+                  "h-14 text-lg text-center font-bold shadow-inner bg-white",
                   isCorrect === true && "border-primary bg-primary/10 text-primary",
                   isCorrect === false && "border-destructive bg-destructive/5 text-destructive"
                 )}
               />
               {isCorrect === false && (
-                <p className="text-sm text-center text-primary font-medium">
-                  Jawaban yang benar: <span className="font-bold">{question.answer}</span>
+                <p className="text-sm text-center text-primary font-bold">
+                  Jawaban yang benar: <span className="underline decoration-2">{question.answer}</span>
                 </p>
               )}
             </div>
@@ -153,7 +168,7 @@ export default function ChallengePage() {
         <CardFooter className="px-8 pb-8">
           {isCorrect === null ? (
             <Button 
-              className="w-full h-12 text-lg rounded-full" 
+              className="w-full h-12 text-lg rounded-full shadow-lg" 
               onClick={checkAnswer}
               disabled={question.type === "mcq" ? !selectedOption : !fillValue.trim()}
             >
@@ -161,7 +176,7 @@ export default function ChallengePage() {
             </Button>
           ) : (
             <Button 
-              className="w-full h-12 text-lg rounded-full gap-2" 
+              className="w-full h-12 text-lg rounded-full gap-2 shadow-lg" 
               onClick={nextQuestion}
             >
               Lanjut <ArrowRight className="w-5 h-5" />

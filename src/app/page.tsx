@@ -1,16 +1,20 @@
+
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { Book, MessageSquare, Trophy, Play, Music } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useState } from "react";
+import { PlaceHolderImages } from "@/lib/placeholder-images";
 
 export default function Home() {
   const [isPlaying, setIsPlaying] = useState(false);
+  const logo = PlaceHolderImages.find(img => img.id === "logo-habaring-hurung");
+  const heroImage = PlaceHolderImages.find(img => img.id === "budaya-dayak");
 
   const toggleWelcomeAudio = () => {
-    console.log("Playing welcome audio...");
     setIsPlaying(!isPlaying);
     setTimeout(() => setIsPlaying(false), 2000);
   };
@@ -46,13 +50,27 @@ export default function Home() {
     <div className="container mx-auto px-4 py-12">
       {/* Hero Section */}
       <section className="text-center mb-16 space-y-6">
+        <div className="flex justify-center mb-4">
+          {logo && (
+            <div className="relative w-24 h-24">
+              <Image 
+                src={logo.imageUrl} 
+                alt={logo.description} 
+                width={96} 
+                height={96} 
+                className="object-contain"
+                data-ai-hint={logo.imageHint}
+              />
+            </div>
+          )}
+        </div>
         <h1 className="text-4xl md:text-6xl font-headline font-bold text-foreground leading-tight">
           Pelestarian Bahasa<br />
           <span className="text-primary">Dayak Ngaju</span>
         </h1>
-        <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-          Belajar bahasa daerah jadi lebih seru dan mudah. 
-          Aplikasi ini dirancang khusus untuk membantu siswa menguasai dan melestarikan Bahasa Dayak Ngaju secara interaktif.
+        <p className="text-lg text-muted-foreground max-w-2xl mx-auto font-medium">
+          Habaring Hurung - Bergotong Royong Melestarikan Budaya Lewat Bahasa.
+          Belajar Bahasa Dayak Ngaju jadi lebih seru dan mudah secara interaktif.
         </p>
         
         <div className="flex justify-center pt-4">
@@ -60,7 +78,7 @@ export default function Home() {
             onClick={toggleWelcomeAudio}
             variant="outline" 
             size="lg" 
-            className="rounded-full gap-3 border-primary text-primary hover:bg-primary hover:text-white transition-all"
+            className="rounded-full gap-3 border-primary text-primary hover:bg-primary hover:text-white transition-all shadow-md"
           >
             {isPlaying ? <Music className="animate-bounce" /> : <Play />}
             Dengarkan Sapaan Dayak Ngaju
@@ -93,9 +111,11 @@ export default function Home() {
       </div>
 
       {/* Info Section */}
-      <section className="mt-24 glass-morphism p-8 rounded-3xl grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+      <section className="mt-24 glass-morphism p-8 rounded-3xl grid grid-cols-1 md:grid-cols-2 gap-12 items-center shadow-xl">
         <div className="space-y-4">
-          <h2 className="text-3xl font-headline font-bold">Mengapa Belajar di Sini?</h2>
+          <h2 className="text-3xl font-headline font-bold flex items-center gap-3">
+            Mengapa Belajar di Sini?
+          </h2>
           <ul className="space-y-3">
             {[
               "Materi yang disesuaikan dengan kurikulum sekolah.",
@@ -103,7 +123,7 @@ export default function Home() {
               "Latihan interaktif untuk mengasah kemampuan.",
               "Dapat diakses kapan saja dan di mana saja secara mandiri."
             ].map((text, i) => (
-              <li key={i} className="flex items-start gap-3 text-muted-foreground">
+              <li key={i} className="flex items-start gap-3 text-muted-foreground font-medium">
                 <div className="w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center flex-shrink-0 mt-0.5">
                   ✓
                 </div>
@@ -113,12 +133,15 @@ export default function Home() {
           </ul>
         </div>
         <div className="relative aspect-video rounded-2xl overflow-hidden shadow-2xl">
-          <img 
-            src="https://picsum.photos/seed/dayak/800/600" 
-            alt="Budaya Dayak" 
-            className="object-cover w-full h-full"
-            data-ai-hint="Dayak culture"
-          />
+          {heroImage && (
+            <Image 
+              src={heroImage.imageUrl} 
+              alt={heroImage.description} 
+              fill
+              className="object-cover"
+              data-ai-hint={heroImage.imageHint}
+            />
+          )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-6">
             <p className="text-white font-medium">Melestarikan bahasa daerah, menjaga identitas bangsa.</p>
           </div>
