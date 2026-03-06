@@ -20,10 +20,10 @@ export function Navbar() {
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2">
           <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
-            <span className="text-primary-foreground font-headline font-bold text-xl">D</span>
+            <span className="text-primary-foreground font-headline font-bold text-xl">P</span>
           </div>
           <span className="font-headline font-bold text-xl hidden sm:inline-block">
-            Dayak<span className="text-primary">Lingua</span>
+            Pelestarian <span className="text-primary">Dayak Ngaju</span>
           </span>
         </Link>
 

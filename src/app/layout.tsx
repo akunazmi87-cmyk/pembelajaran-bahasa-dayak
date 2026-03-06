@@ -4,8 +4,8 @@ import { Navbar } from '@/components/layout/Navbar';
 import { Toaster } from '@/components/ui/toaster';
 
 export const metadata: Metadata = {
-  title: 'DayakLingua - Belajar Bahasa Dayak Ngaju',
-  description: 'Aplikasi Pembelajaran Bahasa Dayak Ngaju Interaktif untuk Siswa',
+  title: 'Pelestarian Bahasa Dayak Ngaju',
+  description: 'Aplikasi Pembelajaran dan Pelestarian Bahasa Dayak Ngaju Interaktif untuk Siswa',
 };
 
 export default function RootLayout({
@@ -26,7 +26,7 @@ export default function RootLayout({
           {children}
         </main>
         <footer className="py-8 text-center text-muted-foreground border-t border-border mt-12">
-          <p>© {new Date().getFullYear()} DayakLingua - Lestarikan Budaya Lewat Bahasa</p>
+          <p>© {new Date().getFullYear()} Pelestarian Bahasa Dayak Ngaju - Lestarikan Budaya Lewat Bahasa</p>
         </footer>
         <Toaster />
       </body>

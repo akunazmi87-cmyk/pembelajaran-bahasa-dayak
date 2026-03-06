@@ -48,12 +48,12 @@ export default function Home() {
       {/* Hero Section */}
       <section className="text-center mb-16 space-y-6">
         <h1 className="text-4xl md:text-6xl font-headline font-bold text-foreground leading-tight">
-          Aplikasi Pembelajaran<br />
-          <span className="text-primary">Bahasa Dayak Ngaju</span>
+          Pelestarian Bahasa<br />
+          <span className="text-primary">Dayak Ngaju</span>
         </h1>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-          Belajar bahasa daerah jadi lebih seru dan mudah dengan DayakLingua. 
-          Dirancang khusus untuk membantu siswa menguasai Bahasa Dayak Ngaju secara interaktif.
+          Belajar bahasa daerah jadi lebih seru dan mudah. 
+          Aplikasi ini dirancang khusus untuk membantu siswa menguasai dan melestarikan Bahasa Dayak Ngaju secara interaktif.
         </p>
         
         <div className="flex justify-center pt-4">
@@ -96,7 +96,7 @@ export default function Home() {
       {/* Info Section */}
       <section className="mt-24 glass-morphism p-8 rounded-3xl grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
         <div className="space-y-4">
-          <h2 className="text-3xl font-headline font-bold">Mengapa Belajar di DayakLingua?</h2>
+          <h2 className="text-3xl font-headline font-bold">Mengapa Belajar di Sini?</h2>
           <ul className="space-y-3">
             {[
               "Materi yang disesuaikan dengan kurikulum sekolah.",
