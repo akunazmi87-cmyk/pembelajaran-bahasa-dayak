@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -11,7 +10,6 @@ import { PlaceHolderImages } from "@/lib/placeholder-images";
 
 export default function Home() {
   const [isPlaying, setIsPlaying] = useState(false);
-  const logo = PlaceHolderImages.find(img => img.id === "logo-habaring-hurung");
   const heroImage = PlaceHolderImages.find(img => img.id === "budaya-dayak");
 
   const toggleWelcomeAudio = () => {
@@ -50,20 +48,6 @@ export default function Home() {
     <div className="container mx-auto px-4 py-12">
       {/* Hero Section */}
       <section className="text-center mb-16 space-y-6">
-        <div className="flex justify-center mb-4">
-          {logo && (
-            <div className="relative w-24 h-24">
-              <Image 
-                src={logo.imageUrl} 
-                alt={logo.description} 
-                width={96} 
-                height={96} 
-                className="object-contain"
-                data-ai-hint={logo.imageHint}
-              />
-            </div>
-          )}
-        </div>
         <h1 className="text-4xl md:text-6xl font-headline font-bold text-foreground leading-tight">
           Pelestarian Bahasa<br />
           <span className="text-primary">Dayak Ngaju</span>

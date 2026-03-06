@@ -1,19 +1,15 @@
-
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import { Play, Volume2, User, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CONVERSATIONS } from "@/lib/data";
 import { cn } from "@/lib/utils";
-import { PlaceHolderImages } from "@/lib/placeholder-images";
 
 export default function ConversationPage() {
   const [selectedTopic, setSelectedTopic] = useState<any>(null);
   const [isPlayingAll, setIsPlayingAll] = useState(false);
-  const logo = PlaceHolderImages.find(img => img.id === "logo-habaring-hurung");
 
   const playSingleAudio = (text: string) => {
     console.log(`Playing: ${text}`);
@@ -28,19 +24,7 @@ export default function ConversationPage() {
   if (!selectedTopic) {
     return (
       <div className="container mx-auto px-4 py-12">
-        <div className="flex items-center gap-4 mb-8">
-          {logo && (
-            <Image 
-              src={logo.imageUrl} 
-              alt={logo.description} 
-              width={50} 
-              height={50} 
-              className="object-contain"
-              data-ai-hint={logo.imageHint}
-            />
-          )}
-          <h1 className="text-4xl font-headline font-bold">Ruang Percakapan</h1>
-        </div>
+        <h1 className="text-4xl font-headline font-bold mb-8">Ruang Percakapan</h1>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {CONVERSATIONS.map((topic) => (
             <Card 
@@ -69,19 +53,7 @@ export default function ConversationPage() {
         <Button variant="ghost" onClick={() => setSelectedTopic(null)} className="gap-2 font-bold text-primary hover:bg-primary/10">
           <ArrowLeft className="w-4 h-4" /> Kembali
         </Button>
-        <div className="flex items-center gap-3">
-          {logo && (
-            <Image 
-              src={logo.imageUrl} 
-              alt={logo.description} 
-              width={32} 
-              height={32} 
-              className="object-contain"
-              data-ai-hint={logo.imageHint}
-            />
-          )}
-          <h1 className="text-2xl font-headline font-bold">{selectedTopic.title}</h1>
-        </div>
+        <h1 className="text-2xl font-headline font-bold">{selectedTopic.title}</h1>
         <Button 
           variant="outline" 
           className="rounded-full gap-2 border-primary text-primary hover:bg-primary hover:text-white shadow-sm"

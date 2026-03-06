@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import { Trophy, CheckCircle2, XCircle, ArrowRight, RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { QUIZ_QUESTIONS } from "@/lib/data";
 import { cn } from "@/lib/utils";
-import { PlaceHolderImages } from "@/lib/placeholder-images";
 
 export default function ChallengePage() {
   const [currentStep, setCurrentStep] = useState(0);
@@ -18,7 +16,6 @@ export default function ChallengePage() {
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [fillValue, setFillValue] = useState("");
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
-  const logo = PlaceHolderImages.find(img => img.id === "logo-habaring-hurung");
 
   const question = QUIZ_QUESTIONS[currentStep];
   const progress = ((currentStep) / QUIZ_QUESTIONS.length) * 100;
@@ -97,18 +94,6 @@ export default function ChallengePage() {
   return (
     <div className="container mx-auto px-4 py-12 max-w-2xl">
       <div className="mb-8 space-y-4 text-center">
-        {logo && (
-          <div className="flex justify-center mb-4">
-            <Image 
-              src={logo.imageUrl} 
-              alt={logo.description} 
-              width={60} 
-              height={60} 
-              className="object-contain"
-              data-ai-hint={logo.imageHint}
-            />
-          </div>
-        )}
         <div className="flex justify-between items-center text-sm font-bold text-primary uppercase tracking-widest">
           <span>Pertanyaan {currentStep + 1} dari {QUIZ_QUESTIONS.length}</span>
           <span>Skor: {score}</span>

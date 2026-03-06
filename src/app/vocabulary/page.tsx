@@ -1,8 +1,6 @@
-
 "use client";
 
 import { useState, useMemo } from "react";
-import Image from "next/image";
 import { Search, Volume2, Sparkles, ArrowLeftRight, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -11,7 +9,6 @@ import { VOCABULARY } from "@/lib/data";
 import { vocabularyContextualizer } from "@/ai/flows/vocabulary-contextualizer-flow";
 import { translateDayakNgaju } from "@/ai/flows/dayak-ngaju-translator-flow";
 import { useToast } from "@/hooks/use-toast";
-import { PlaceHolderImages } from "@/lib/placeholder-images";
 
 export default function VocabularyPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -19,7 +16,6 @@ export default function VocabularyPage() {
   const [examples, setExamples] = useState<string[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
-  const logo = PlaceHolderImages.find(img => img.id === "logo-habaring-hurung");
 
   // Translator state
   const [translateText, setTranslateText] = useState("");
@@ -66,21 +62,9 @@ export default function VocabularyPage() {
   return (
     <div className="container mx-auto px-4 py-12">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
-        <div className="flex items-center gap-4">
-          {logo && (
-            <Image 
-              src={logo.imageUrl} 
-              alt={logo.description} 
-              width={60} 
-              height={60} 
-              className="object-contain"
-              data-ai-hint={logo.imageHint}
-            />
-          )}
-          <div>
-            <h1 className="text-4xl font-headline font-bold mb-2">Ruang Kosakata</h1>
-            <p className="text-muted-foreground">Cari dan pelajari ribuan kata dalam Bahasa Dayak Ngaju.</p>
-          </div>
+        <div>
+          <h1 className="text-4xl font-headline font-bold mb-2">Ruang Kosakata</h1>
+          <p className="text-muted-foreground">Cari dan pelajari ribuan kata dalam Bahasa Dayak Ngaju.</p>
         </div>
         <div className="relative w-full md:w-96">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
