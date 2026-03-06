@@ -7,6 +7,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { QUIZ_QUESTIONS } from "@/lib/data";
+import { cn } from "@/lib/utils";
 
 export default function ChallengePage() {
   const [currentStep, setCurrentStep] = useState(0);
@@ -64,8 +65,8 @@ export default function ChallengePage() {
 
     return (
       <div className="container mx-auto px-4 py-12 max-w-2xl text-center">
-        <div className="bg-white p-12 rounded-3xl shadow-xl border-none space-y-8">
-          <div className="w-24 h-24 bg-amber-100 text-amber-500 rounded-full flex items-center justify-center mx-auto">
+        <div className="bg-card p-12 rounded-3xl shadow-xl border border-border space-y-8">
+          <div className="w-24 h-24 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto">
             <Trophy className="w-12 h-12" />
           </div>
           <div className="space-y-2">
@@ -118,7 +119,7 @@ export default function ChallengePage() {
                   className={cn(
                     "p-4 rounded-xl border-2 text-left transition-all font-medium flex justify-between items-center",
                     selectedOption === option ? "border-primary bg-primary/5 text-primary" : "border-muted hover:border-primary/50",
-                    isCorrect !== null && option === question.answer && "border-emerald-500 bg-emerald-50 text-emerald-700",
+                    isCorrect !== null && option === question.answer && "border-primary bg-primary/10 text-primary font-bold shadow-sm",
                     isCorrect === false && selectedOption === option && option !== question.answer && "border-destructive bg-destructive/5 text-destructive"
                   )}
                 >
@@ -137,12 +138,12 @@ export default function ChallengePage() {
                 disabled={isCorrect !== null}
                 className={cn(
                   "h-14 text-lg text-center font-bold",
-                  isCorrect === true && "border-emerald-500 bg-emerald-50 text-emerald-700",
+                  isCorrect === true && "border-primary bg-primary/10 text-primary",
                   isCorrect === false && "border-destructive bg-destructive/5 text-destructive"
                 )}
               />
               {isCorrect === false && (
-                <p className="text-sm text-center text-emerald-600 font-medium">
+                <p className="text-sm text-center text-primary font-medium">
                   Jawaban yang benar: <span className="font-bold">{question.answer}</span>
                 </p>
               )}
