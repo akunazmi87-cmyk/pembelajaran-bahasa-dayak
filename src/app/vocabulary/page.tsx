@@ -57,7 +57,6 @@ export default function VocabularyPage() {
 
   const playAudio = (word: string) => {
     console.log(`Playing audio for: ${word}`);
-    // Real implementation would use an Audio object with the URL from VOCABULARY
   };
 
   return (
@@ -121,7 +120,7 @@ export default function VocabularyPage() {
         {/* Translation & AI Helper */}
         <div className="space-y-6">
           {/* AI Translator */}
-          <Card className="shadow-lg border-none bg-emerald-50/50">
+          <Card className="shadow-lg border-none bg-orange-50/50">
             <CardContent className="p-6 space-y-4">
               <div className="flex items-center justify-between mb-2">
                 <h2 className="font-headline font-bold text-xl flex items-center gap-2">

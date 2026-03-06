@@ -10,7 +10,6 @@ export default function Home() {
   const [isPlaying, setIsPlaying] = useState(false);
 
   const toggleWelcomeAudio = () => {
-    // In a real app, this would play an actual audio file from Firebase Storage
     console.log("Playing welcome audio...");
     setIsPlaying(!isPlaying);
     setTimeout(() => setIsPlaying(false), 2000);
@@ -22,7 +21,7 @@ export default function Home() {
       description: "Pelajari kata-kata dasar dan cari terjemahan dengan kamus interaktif kami.",
       icon: Book,
       href: "/vocabulary",
-      color: "bg-emerald-100 text-emerald-600",
+      color: "bg-orange-100 text-orange-800",
       buttonText: "Buka Kamus"
     },
     {
@@ -30,7 +29,7 @@ export default function Home() {
       description: "Latih kemampuan bicara dengan simulasi dialog sehari-hari di sekolah.",
       icon: MessageSquare,
       href: "/conversation",
-      color: "bg-lime-100 text-lime-600",
+      color: "bg-amber-100 text-amber-800",
       buttonText: "Mulai Dialog"
     },
     {
@@ -38,7 +37,7 @@ export default function Home() {
       description: "Uji kemampuanmu dengan latihan soal interaktif dan dapatkan skor terbaik.",
       icon: Trophy,
       href: "/challenge",
-      color: "bg-amber-100 text-amber-600",
+      color: "bg-stone-200 text-stone-800",
       buttonText: "Ikuti Kuis"
     }
   ];
