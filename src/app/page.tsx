@@ -32,7 +32,7 @@ export default function Home() {
       description: "Game edukasi menyusun huruf menjadi kosakata Dayak Ngaju yang benar.",
       icon: Gamepad2,
       href: "/word-game",
-      color: "bg-emerald-100 text-emerald-800",
+      color: "bg-primary/10 text-primary",
       buttonText: "Main Sekarang"
     },
     {
@@ -40,7 +40,7 @@ export default function Home() {
       description: "Pelajari kata-kata dasar dan cari terjemahan dengan kamus interaktif kami.",
       icon: Book,
       href: "/vocabulary",
-      color: "bg-orange-100 text-orange-800",
+      color: "bg-primary/10 text-primary",
       buttonText: "Buka Kamus"
     },
     {
@@ -48,14 +48,13 @@ export default function Home() {
       description: "Latih kemampuan bicara dengan simulasi dialog sehari-hari di sekolah.",
       icon: MessageSquare,
       href: "/conversation",
-      color: "bg-amber-100 text-amber-800",
+      color: "bg-primary/10 text-primary",
       buttonText: "Mulai Dialog"
     }
   ];
 
   return (
     <div className="container mx-auto px-4 py-12">
-      {/* Hero Section */}
       <section className="text-center mb-16 space-y-6">
         <div className="inline-flex items-center gap-2 bg-primary/5 px-4 py-2 rounded-full text-primary font-bold text-sm mb-4">
           <Sparkles className="w-4 h-4" />
@@ -83,7 +82,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Modules Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {modules.map((module, index) => (
           <Link key={index} href={module.href}>
@@ -107,7 +105,6 @@ export default function Home() {
         ))}
       </div>
 
-      {/* Info Section */}
       <section className="mt-24 glass-morphism p-12 rounded-[2.5rem] grid grid-cols-1 lg:grid-cols-2 gap-16 items-center shadow-2xl relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full -mr-32 -mt-32" />
         <div className="space-y-8 relative z-10">

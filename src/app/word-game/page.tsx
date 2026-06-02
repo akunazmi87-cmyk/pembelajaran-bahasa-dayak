@@ -33,7 +33,7 @@ import {
   query, 
   orderBy, 
   limit, 
-  getDocs,
+  onSnapshot,
   serverTimestamp 
 } from "firebase/firestore";
 import { 
@@ -93,56 +93,41 @@ export default function WordGamePage() {
 
   // Fetch/Sync Profile
   useEffect(() => {
-    if (!user || !firestore) return;
+    if (!user || !firestore) {
+      if (!userLoading) setIsLoadingProfile(false);
+      return;
+    }
 
-    const fetchProfile = async () => {
-      setIsLoadingProfile(true);
-      try {
-        const docRef = doc(firestore, "game_profiles", user.uid);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          setPoints(data.totalPoints || 0);
-          setHighScore(data.highScore || 0);
-          setBadges(data.badges || []);
-        }
-      } catch (e) {
-        console.error("Error fetching profile:", e);
-      } finally {
-        setIsLoadingProfile(false);
+    const docRef = doc(firestore, "game_profiles", user.uid);
+    const unsubscribeProfile = onSnapshot(docRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setPoints(data.totalPoints || 0);
+        setHighScore(data.highScore || 0);
+        setBadges(data.badges || []);
       }
-    };
+      setIsLoadingProfile(false);
+    });
 
-    fetchProfile();
-    fetchLeaderboard();
-  }, [user, firestore]);
-
-  const fetchLeaderboard = async () => {
-    if (!firestore) return;
     const q = query(collection(firestore, "game_profiles"), orderBy("totalPoints", "desc"), limit(10));
-    const querySnapshot = await getDocs(q);
-    const topPlayers = querySnapshot.docs.map(doc => doc.data());
-    setLeaderboard(topPlayers);
-  };
+    const unsubscribeLeaderboard = onSnapshot(q, (snapshot) => {
+      const topPlayers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setLeaderboard(topPlayers);
+    });
 
-  // Exit Confirmation Logic
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = "";
+    return () => {
+      unsubscribeProfile();
+      unsubscribeLeaderboard();
     };
+  }, [user, firestore, userLoading]);
 
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, []);
-
+  // Scramble Logic
   const scrambleWord = (word: string) => {
     const arr = word.toUpperCase().split("");
     for (let i = arr.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [arr[i], arr[j]] = [arr[j], arr[i]];
     }
-    // Ensure it's actually scrambled
     if (arr.join("") === word.toUpperCase() && word.length > 1) {
       return scrambleWord(word);
     }
@@ -164,19 +149,28 @@ export default function WordGamePage() {
     }
   }, [currentWord, nextLevel]);
 
+  // Browser Exit Confirmation
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (userInput.length > 0 && isCorrect === null) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [userInput, isCorrect]);
+
   const handleLetterClick = (letter: string, index: number) => {
     if (isCorrect !== null) return;
     
-    // Add to input
     const newInput = [...userInput, letter];
     setUserInput(newInput);
 
-    // Remove from scrambled (just by index to handle duplicates)
     const newScrambled = [...scrambled];
     newScrambled.splice(index, 1);
     setScrambled(newScrambled);
 
-    // Check if finished
     if (newInput.length === currentWord.ngaju.length) {
       const finalWord = newInput.join("");
       if (finalWord === currentWord.ngaju.toUpperCase()) {
@@ -200,13 +194,10 @@ export default function WordGamePage() {
     
     setHintsLeft(prev => prev - 1);
     const correctLetter = currentWord.ngaju[userInput.length].toUpperCase();
-    
-    // Auto-fill one letter
-    const newLetter = correctLetter;
-    const letterIndex = scrambled.indexOf(newLetter);
+    const letterIndex = scrambled.indexOf(correctLetter);
     
     if (letterIndex > -1) {
-      handleLetterClick(newLetter, letterIndex);
+      handleLetterClick(correctLetter, letterIndex);
     }
   };
 
@@ -214,24 +205,22 @@ export default function WordGamePage() {
     const newPoints = points + 2;
     setPoints(newPoints);
     
-    // Update Badge & Highscore
     let newBadges = [...badges];
+    let badgeAdded = false;
     BADGES.forEach(b => {
       if (newPoints >= b.points && !newBadges.includes(b.label)) {
         newBadges.push(b.label);
-        toast({
-          title: "🎉 Badge Baru Diperoleh!",
-          description: `Selamat! Kamu mendapatkan badge: ${b.label}`,
-        });
+        badgeAdded = true;
       }
     });
-    setBadges(newBadges);
 
-    if (newPoints > highScore) {
-      setHighScore(newPoints);
+    if (badgeAdded) {
+      toast({
+        title: "🎉 Badge Baru Diperoleh!",
+        description: `Kamu naik ke level baru dan mendapatkan badge!`,
+      });
     }
 
-    // Save to Firestore
     if (user && firestore) {
       const currentLevelObj = [...LEVELS].reverse().find(l => newPoints >= l.min) || LEVELS[0];
       setDoc(doc(firestore, "game_profiles", user.uid), {
@@ -263,15 +252,15 @@ export default function WordGamePage() {
 
   if (userLoading || isLoadingProfile) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
         <Loader2 className="w-10 h-10 animate-spin text-primary" />
+        <p className="text-muted-foreground font-medium">Memuat profil permainan...</p>
       </div>
     );
   }
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
-      {/* Header Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <Card className="bg-primary/5 border-none shadow-sm">
           <CardContent className="p-4 flex items-center gap-4">
@@ -304,7 +293,6 @@ export default function WordGamePage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Game Area */}
         <div className="lg:col-span-2 space-y-6">
           <Card className="shadow-2xl border-none overflow-hidden bg-card">
             <div className="h-2 bg-primary" />
@@ -315,15 +303,14 @@ export default function WordGamePage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="p-8 space-y-8">
-              {/* Answer Area */}
               <div className="flex flex-wrap justify-center gap-2 min-h-[60px]">
-                {currentWord?.ngaju.split("").map((_, i) => (
+                {currentWord?.ngaju.split("").map((_: any, i: number) => (
                   <div 
                     key={i}
                     className={cn(
                       "w-10 h-12 md:w-12 md:h-14 border-2 rounded-xl flex items-center justify-center text-xl md:text-2xl font-bold transition-all",
                       userInput[i] ? "border-primary bg-primary/5 text-primary scale-105" : "border-dashed border-muted",
-                      isCorrect === true && "border-green-600 bg-green-50 text-green-700",
+                      isCorrect === true && "border-primary bg-primary/10 text-primary",
                       isCorrect === false && "border-destructive bg-destructive/5 text-destructive"
                     )}
                   >
@@ -332,7 +319,6 @@ export default function WordGamePage() {
                 ))}
               </div>
 
-              {/* Scrambled Letters */}
               <div className="flex flex-wrap justify-center gap-3">
                 {scrambled.map((letter, i) => (
                   <Button
@@ -355,7 +341,7 @@ export default function WordGamePage() {
               )}
 
               {isCorrect === true && (
-                <div className="flex items-center justify-center gap-2 text-green-700 font-bold text-xl animate-pulse">
+                <div className="flex items-center justify-center gap-2 text-primary font-bold text-xl animate-pulse">
                   <CheckCircle2 className="w-6 h-6" />
                   Luar Biasa! +2 Poin
                 </div>
@@ -392,7 +378,6 @@ export default function WordGamePage() {
             </CardFooter>
           </Card>
 
-          {/* Badges Section */}
           <Card className="border-none shadow-lg">
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
@@ -415,7 +400,6 @@ export default function WordGamePage() {
           </Card>
         </div>
 
-        {/* Sidebar / Leaderboard */}
         <div className="space-y-6">
           <Card className="border-none shadow-lg sticky top-24">
             <CardHeader>
@@ -427,39 +411,42 @@ export default function WordGamePage() {
             </CardHeader>
             <CardContent className="px-2">
               <div className="space-y-1">
-                {leaderboard.map((player, i) => (
-                  <div 
-                    key={i} 
-                    className={cn(
-                      "flex items-center justify-between p-3 rounded-xl transition-colors",
-                      player.displayName === user?.displayName ? "bg-primary/10 border border-primary/20" : "hover:bg-muted"
-                    )}
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className={cn(
-                        "w-6 text-center font-bold",
-                        i === 0 ? "text-yellow-600" : i === 1 ? "text-slate-400" : i === 2 ? "text-amber-700" : "text-muted-foreground"
-                      )}>
-                        {i + 1}
-                      </span>
-                      <div>
-                        <p className="font-bold text-sm truncate max-w-[120px]">{player.displayName}</p>
-                        <p className="text-[10px] text-muted-foreground uppercase font-bold">{player.level}</p>
+                {leaderboard.length === 0 ? (
+                  <p className="text-center py-8 text-sm text-muted-foreground italic">Belum ada pemain.</p>
+                ) : (
+                  leaderboard.map((player, i) => (
+                    <div 
+                      key={player.id} 
+                      className={cn(
+                        "flex items-center justify-between p-3 rounded-xl transition-colors",
+                        player.id === user?.uid ? "bg-primary/10 border border-primary/20" : "hover:bg-muted"
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className={cn(
+                          "w-6 text-center font-bold",
+                          i === 0 ? "text-yellow-600" : i === 1 ? "text-slate-400" : i === 2 ? "text-amber-700" : "text-muted-foreground"
+                        )}>
+                          {i + 1}
+                        </span>
+                        <div>
+                          <p className="font-bold text-sm truncate max-w-[120px]">{player.displayName}</p>
+                          <p className="text-[10px] text-muted-foreground uppercase font-bold">{player.level}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-headline font-bold text-primary">{player.totalPoints}</p>
+                        <p className="text-[10px] text-muted-foreground">PTS</p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-headline font-bold text-primary">{player.totalPoints}</p>
-                      <p className="text-[10px] text-muted-foreground">PTS</p>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>
         </div>
       </div>
 
-      {/* Exit Confirmation Dialog */}
       <AlertDialog open={showExitDialog} onOpenChange={setShowExitDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
