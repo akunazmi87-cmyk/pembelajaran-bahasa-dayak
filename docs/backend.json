@@ -1,0 +1,26 @@
+
+{
+  "entities": {
+    "TranslationHistory": {
+      "title": "Translation History",
+      "description": "Stores user translation history for Dayak Ngaju",
+      "type": "object",
+      "properties": {
+        "indonesian": { "type": "string" },
+        "ngaju": { "type": "string" },
+        "source": { "type": "string", "enum": ["database", "ai"] },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["indonesian", "ngaju", "source", "timestamp"]
+    }
+  },
+  "auth": {
+    "providers": ["google.com"]
+  },
+  "firestore": {
+    "/translation_history/{historyId}": {
+      "schema": "#/entities/TranslationHistory",
+      "description": "User translation history"
+    }
+  }
+}

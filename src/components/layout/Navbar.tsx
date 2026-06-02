@@ -1,12 +1,14 @@
+
 "use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Book, MessageSquare, Trophy, Home } from "lucide-react";
+import { Book, MessageSquare, Trophy, Home, Languages } from "lucide-react";
 
 const navItems = [
   { name: "Beranda", href: "/", icon: Home },
+  { name: "Penerjemah", href: "/translator", icon: Languages },
   { name: "Kosakata", href: "/vocabulary", icon: Book },
   { name: "Percakapan", href: "/conversation", icon: MessageSquare },
   { name: "Tantangan", href: "/challenge", icon: Trophy },
@@ -18,7 +20,10 @@ export function Navbar() {
   return (
     <nav className="sticky top-0 z-50 w-full glass-morphism border-b border-border">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-3">
+        <Link href="/" className="flex items-center gap-3 group">
+          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-bold transition-transform group-hover:rotate-12">
+            DN
+          </div>
           <span className="font-headline font-bold text-xl">
             Pelestarian <span className="text-primary">Dayak Ngaju</span>
           </span>
@@ -40,7 +45,7 @@ export function Navbar() {
           ))}
         </div>
 
-        <div className="md:hidden flex items-center gap-4 fixed bottom-0 left-0 right-0 bg-background border-t p-2 justify-around shadow-lg">
+        <div className="md:hidden flex items-center gap-4 fixed bottom-0 left-0 right-0 bg-background border-t p-2 justify-around shadow-lg z-50">
            {navItems.map((item) => (
             <Link
               key={item.href}
