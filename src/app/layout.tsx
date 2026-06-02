@@ -2,6 +2,7 @@ import type {Metadata} from 'next';
 import './globals.css';
 import { Navbar } from '@/components/layout/Navbar';
 import { Toaster } from '@/components/ui/toaster';
+import { FirebaseClientProvider } from '@/firebase';
 
 export const metadata: Metadata = {
   title: 'Pelestarian Bahasa Dayak Ngaju',
@@ -21,14 +22,16 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body antialiased bg-background text-foreground min-h-screen flex flex-col">
-        <Navbar />
-        <main className="flex-1">
-          {children}
-        </main>
-        <footer className="py-8 text-center text-muted-foreground border-t border-border mt-12">
-          <p>© {new Date().getFullYear()} Pelestarian Bahasa Dayak Ngaju - Lestarikan Budaya Lewat Bahasa</p>
-        </footer>
-        <Toaster />
+        <FirebaseClientProvider>
+          <Navbar />
+          <main className="flex-1">
+            {children}
+          </main>
+          <footer className="py-8 text-center text-muted-foreground border-t border-border mt-12">
+            <p>© {new Date().getFullYear()} Pelestarian Bahasa Dayak Ngaju - Lestarikan Budaya Lewat Bahasa</p>
+          </footer>
+          <Toaster />
+        </FirebaseClientProvider>
       </body>
     </html>
   );
