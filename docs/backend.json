@@ -12,6 +12,23 @@
         "timestamp": { "type": "string", "format": "date-time" }
       },
       "required": ["indonesian", "ngaju", "source", "timestamp"]
+    },
+    "GameProfile": {
+      "title": "Game Profile",
+      "description": "Stores user game stats for Word Scramble",
+      "type": "object",
+      "properties": {
+        "displayName": { "type": "string" },
+        "totalPoints": { "type": "number" },
+        "level": { "type": "string" },
+        "highScore": { "type": "number" },
+        "badges": { 
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["displayName", "totalPoints", "level", "highScore", "badges"]
     }
   },
   "auth": {
@@ -21,6 +38,10 @@
     "/translation_history/{historyId}": {
       "schema": "#/entities/TranslationHistory",
       "description": "User translation history"
+    },
+    "/game_profiles/{userId}": {
+      "schema": "#/entities/GameProfile",
+      "description": "User game statistics and achievements"
     }
   }
 }

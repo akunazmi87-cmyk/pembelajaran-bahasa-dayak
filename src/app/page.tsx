@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Book, MessageSquare, Trophy, Play, Music, Languages, Sparkles } from "lucide-react";
+import { Book, MessageSquare, Trophy, Play, Music, Languages, Sparkles, Gamepad2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useState } from "react";
@@ -28,6 +28,14 @@ export default function Home() {
       buttonText: "Buka Penerjemah"
     },
     {
+      title: "Susun Kata",
+      description: "Game edukasi menyusun huruf menjadi kosakata Dayak Ngaju yang benar.",
+      icon: Gamepad2,
+      href: "/word-game",
+      color: "bg-emerald-100 text-emerald-800",
+      buttonText: "Main Sekarang"
+    },
+    {
       title: "Ruang Kosakata",
       description: "Pelajari kata-kata dasar dan cari terjemahan dengan kamus interaktif kami.",
       icon: Book,
@@ -42,14 +50,6 @@ export default function Home() {
       href: "/conversation",
       color: "bg-amber-100 text-amber-800",
       buttonText: "Mulai Dialog"
-    },
-    {
-      title: "Tantangan Akhir",
-      description: "Uji kemampuanmu dengan latihan soal interaktif dan dapatkan skor terbaik.",
-      icon: Trophy,
-      href: "/challenge",
-      color: "bg-stone-200 text-stone-800",
-      buttonText: "Ikuti Kuis"
     }
   ];
 
@@ -118,6 +118,7 @@ export default function Home() {
             {[
               "Database terjemahan sapaan tamu sekolah yang akurat.",
               "Dukungan AI untuk menerjemahkan kalimat kompleks.",
+              "Mini game edukasi untuk menghafal kosakata.",
               "Audio pelafalan asli (TTS) untuk belajar intonasi.",
               "Pencatatan riwayat belajar siswa secara otomatis di Firestore."
             ].map((text, i) => (
