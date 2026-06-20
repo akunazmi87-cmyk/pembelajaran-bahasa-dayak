@@ -70,6 +70,7 @@ const BADGES = [
 ];
 
 export default function WordGamePage() {
+  const [mounted, setMounted] = useState(false);
   const { user, loading: userLoading } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -96,6 +97,10 @@ export default function WordGamePage() {
   const [badges, setBadges] = useState<string[]>([]);
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Fetch/Sync Profile
   useEffect(() => {
@@ -160,10 +165,10 @@ export default function WordGamePage() {
   }, [usedWordIds, vocabList]);
 
   useEffect(() => {
-    if (vocabList.length > 0 && !currentWord) {
+    if (vocabList.length > 0 && !currentWord && mounted) {
       nextLevel();
     }
-  }, [currentWord, nextLevel, vocabList]);
+  }, [currentWord, nextLevel, vocabList, mounted]);
 
   // Browser Exit Confirmation
   useEffect(() => {
@@ -287,7 +292,7 @@ export default function WordGamePage() {
     return (current / range) * 100;
   }, [points, currentLevelInfo, nextLevelInfo]);
 
-  if (userLoading || isLoadingProfile || vocabLoading) {
+  if (!mounted || userLoading || isLoadingProfile || vocabLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
         <Loader2 className="w-10 h-10 animate-spin text-primary" />

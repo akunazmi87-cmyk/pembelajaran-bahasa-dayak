@@ -1,3 +1,4 @@
+
 import type {Metadata} from 'next';
 import './globals.css';
 import { Navbar } from '@/components/layout/Navbar';
@@ -15,7 +16,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="id">
+    <html lang="id" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -27,12 +28,18 @@ export default function RootLayout({
           <main className="flex-1">
             {children}
           </main>
-          <footer className="py-8 text-center text-muted-foreground border-t border-border mt-12">
-            <p>© {new Date().getFullYear()} Pelestarian Bahasa Dayak Ngaju - Lestarikan Budaya Lewat Bahasa</p>
-          </footer>
+          <Footer />
           <Toaster />
         </FirebaseClientProvider>
       </body>
     </html>
+  );
+}
+
+function Footer() {
+  return (
+    <footer className="py-8 text-center text-muted-foreground border-t border-border mt-12">
+      <p>© {new Date().getFullYear()} Pelestarian Bahasa Dayak Ngaju - Lestarikan Budaya Lewat Bahasa</p>
+    </footer>
   );
 }

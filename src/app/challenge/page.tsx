@@ -12,6 +12,7 @@ import { useCollection, useFirestore } from "@/firebase";
 import { collection } from "firebase/firestore";
 
 export default function ChallengePage() {
+  const [mounted, setMounted] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [score, setScore] = useState(0);
   const [isFinished, setIsFinished] = useState(false);
@@ -23,9 +24,13 @@ export default function ChallengePage() {
   const vocabQuery = useMemo(() => collection(firestore, "vocabulary"), [firestore]);
   const { data: vocabList, loading } = useCollection<any>(vocabQuery);
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // Generate Questions from Firestore Data
   const quizQuestions = useMemo(() => {
-    if (vocabList.length < 5) return [];
+    if (!mounted || vocabList.length < 5) return [];
     
     // Create 10 random questions
     const shuffled = [...vocabList].sort(() => 0.5 - Math.random());
@@ -51,7 +56,7 @@ export default function ChallengePage() {
         };
       }
     });
-  }, [vocabList]);
+  }, [vocabList, mounted]);
 
   const question = quizQuestions[currentStep];
   const progress = quizQuestions.length > 0 ? ((currentStep) / quizQuestions.length) * 100 : 0;
@@ -93,7 +98,7 @@ export default function ChallengePage() {
     setIsCorrect(null);
   };
 
-  if (loading) {
+  if (!mounted || loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
         <Loader2 className="w-10 h-10 animate-spin text-primary" />
