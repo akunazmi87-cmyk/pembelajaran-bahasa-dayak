@@ -35,21 +35,37 @@ export const INITIAL_VOCABULARY = [
 
 export const CONVERSATIONS = [
   {
+    id: "makan-minum",
+    title: "Makan dan Minum",
+    dialogues: [
+      { speaker: "A", text: "Salamat kuman.", language: "Dayak Ngaju" },
+      { speaker: "B", text: "Tarima kasih.", language: "Dayak Ngaju" },
+      { speaker: "A", text: "Jangan lupa mihup dan kuman.", language: "Dayak Ngaju" },
+      { speaker: "B", text: "Ie, tarima kasih.", language: "Dayak Ngaju" },
+    ]
+  },
+  {
+    id: "belajar-dayak",
+    title: "Belajar Bahasa",
+    dialogues: [
+      { speaker: "A", text: "Itah balajar Bahasa Dayak Ngaju.", language: "Dayak Ngaju" },
+      { speaker: "B", text: "Ie, aku balajar.", language: "Dayak Ngaju" },
+    ]
+  },
+  {
+    id: "kegiatan-mandui",
+    title: "Kegiatan Mandi",
+    dialogues: [
+      { speaker: "A", text: "Andau itah mandui?", language: "Dayak Ngaju" },
+      { speaker: "B", text: "Andau sorenya aku mandui.", language: "Dayak Ngaju" },
+    ]
+  },
+  {
     id: "lobby-school",
     title: "Menyapa di Sekolah",
     dialogues: [
       { speaker: "Siswa A", text: "Tabe, narai kabar?", language: "Dayak Ngaju" },
       { speaker: "Siswa B", text: "Kabar bahalap. Ikau narai kabar?", language: "Dayak Ngaju" },
-      { speaker: "Siswa A", text: "Kabar bahalap kea. Ikau handak kuman?", language: "Dayak Ngaju" },
-      { speaker: "Siswa B", text: "Yoh, ayo itah kuman hong kantin!", language: "Dayak Ngaju" },
-    ]
-  },
-  {
-    id: "perkenalan",
-    title: "Perkenalan Sederhana",
-    dialogues: [
-      { speaker: "Guru", text: "Tabe anak-anak, aran ku Bapak Iwan.", language: "Dayak Ngaju" },
-      { speaker: "Siswa", text: "Tabe Bapak. Aran ku Siti.", language: "Dayak Ngaju" },
     ]
   }
 ];

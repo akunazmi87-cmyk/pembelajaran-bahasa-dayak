@@ -33,7 +33,7 @@ export default function VocabularyPage() {
 
   const categories = useMemo(() => {
     const cats = new Set(INITIAL_VOCABULARY.map(v => v.category));
-    return Array.from(cats);
+    return Array.from(cats).sort();
   }, []);
 
   const filteredVocab = useMemo(() => {
@@ -42,7 +42,7 @@ export default function VocabularyPage() {
                            v.indonesian.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesCategory = selectedCategory ? v.category === selectedCategory : true;
       return matchesSearch && matchesCategory;
-    });
+    }).sort((a, b) => a.ngaju.localeCompare(b.ngaju));
   }, [searchQuery, selectedCategory]);
 
   const handleTranslate = async () => {

@@ -11,7 +11,9 @@ import {
   Play, 
   Pause, 
   Square,
-  AlertCircle
+  AlertCircle,
+  Database,
+  Info
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import { translateDayakNgaju } from "@/ai/flows/dayak-ngaju-translator-flow";
 import { textToSpeech } from "@/ai/flows/text-to-speech-flow";
 import { cn } from "@/lib/utils";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function TranslatorPage() {
   const [mounted, setMounted] = useState(false);
@@ -136,61 +139,84 @@ export default function TranslatorPage() {
         </Card>
 
         {result && (
-          <Card className="animate-in fade-in slide-in-from-bottom-4 shadow-2xl border-primary/20 bg-card">
-            <CardContent className="p-8 space-y-8">
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Bahasa Indonesia</span>
-                  <Button variant="ghost" size="icon" onClick={() => copyToClipboard(result.indo)}>
-                    <Copy className="w-4 h-4" />
-                  </Button>
-                </div>
-                <p className="text-xl font-medium">{result.indo}</p>
-              </div>
+          <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4">
+            {result.source === 'ai' && (
+              <Alert variant="destructive" className="bg-orange-50 border-orange-200 text-orange-800">
+                <AlertCircle className="h-4 w-4 text-orange-600" />
+                <AlertTitle className="font-bold">Kosakata belum tersedia dalam database.</AlertTitle>
+                <AlertDescription className="text-sm">
+                  Hasil di bawah ini dihasilkan oleh AI dan mungkin memerlukan verifikasi lebih lanjut.
+                </AlertDescription>
+              </Alert>
+            )}
 
-              <div className="space-y-2 border-t pt-8">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs font-bold uppercase tracking-widest text-primary">Dayak Ngaju</span>
-                  <Button variant="ghost" size="icon" onClick={() => copyToClipboard(result.ngaju)}>
-                    <Copy className="w-4 h-4 text-primary" />
-                  </Button>
-                </div>
-                
-                <p className="text-3xl font-headline font-bold text-primary leading-tight">
-                  {result.ngaju}
-                </p>
-
-                <div className="flex items-center gap-4 pt-6 mt-6 border-t">
-                  <Button 
-                    onClick={() => handleTTS(result.ngaju)}
-                    disabled={isAudioLoading}
-                    variant={audioState === 'playing' ? "secondary" : "default"}
-                    className="rounded-full gap-2 px-6 shadow-md"
-                  >
-                    {isAudioLoading ? <Loader2 className="animate-spin" /> : 
-                     audioState === 'playing' ? <Pause /> : <Play />}
-                    {audioState === 'playing' ? "Jeda" : "Dengarkan"}
-                  </Button>
-                  
-                  {audioState !== 'idle' && (
-                    <Button variant="outline" className="rounded-full h-10 w-10 p-0" onClick={stopAudio}>
-                      <Square className="w-4 h-4" />
+            <Card className="shadow-2xl border-primary/20 bg-card">
+              <CardContent className="p-8 space-y-8">
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Bahasa Indonesia</span>
+                    <Button variant="ghost" size="icon" onClick={() => copyToClipboard(result.indo)}>
+                      <Copy className="w-4 h-4" />
                     </Button>
+                  </div>
+                  <p className="text-xl font-medium">{result.indo}</p>
+                </div>
+
+                <div className="space-y-2 border-t pt-8">
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold uppercase tracking-widest text-primary">Dayak Ngaju</span>
+                      {result.source === 'database' ? (
+                        <Badge variant="secondary" className="bg-primary/10 text-primary text-[10px] gap-1">
+                          <Database className="w-3 h-3" /> Database Lokal
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-[10px] gap-1">
+                          <Sparkles className="w-3 h-3" /> AI Gemini
+                        </Badge>
+                      )}
+                    </div>
+                    <Button variant="ghost" size="icon" onClick={() => copyToClipboard(result.ngaju)}>
+                      <Copy className="w-4 h-4 text-primary" />
+                    </Button>
+                  </div>
+                  
+                  <p className="text-3xl font-headline font-bold text-primary leading-tight">
+                    {result.ngaju}
+                  </p>
+
+                  <div className="flex items-center gap-4 pt-6 mt-6 border-t">
+                    <Button 
+                      onClick={() => handleTTS(result.ngaju)}
+                      disabled={isAudioLoading}
+                      variant={audioState === 'playing' ? "secondary" : "default"}
+                      className="rounded-full gap-2 px-6 shadow-md"
+                    >
+                      {isAudioLoading ? <Loader2 className="animate-spin" /> : 
+                       audioState === 'playing' ? <Pause /> : <Play />}
+                      {audioState === 'playing' ? "Jeda" : "Dengarkan"}
+                    </Button>
+                    
+                    {audioState !== 'idle' && (
+                      <Button variant="outline" className="rounded-full h-10 w-10 p-0" onClick={stopAudio}>
+                        <Square className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                  
+                  {audioUrl && (
+                    <audio 
+                      ref={audioRef} 
+                      src={audioUrl} 
+                      onEnded={() => setAudioState('idle')}
+                      onPlay={() => setAudioState('playing')}
+                      onPause={() => setAudioState('paused')}
+                    />
                   )}
                 </div>
-                
-                {audioUrl && (
-                  <audio 
-                    ref={audioRef} 
-                    src={audioUrl} 
-                    onEnded={() => setAudioState('idle')}
-                    onPlay={() => setAudioState('playing')}
-                    onPause={() => setAudioState('paused')}
-                  />
-                )}
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
         )}
       </div>
     </div>
