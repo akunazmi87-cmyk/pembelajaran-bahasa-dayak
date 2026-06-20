@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
@@ -12,7 +11,8 @@ import {
   AlertTriangle,
   Users,
   Loader2,
-  CheckCircle2
+  CheckCircle2,
+  Zap
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from "@/components/ui/card";
@@ -28,7 +28,6 @@ import {
 import { 
   doc, 
   setDoc, 
-  getDoc, 
   collection, 
   query, 
   orderBy, 
@@ -80,10 +79,12 @@ export default function WordGamePage() {
   const [scrambled, setScrambled] = useState<string[]>([]);
   const [userInput, setUserInput] = useState<string[]>([]);
   const [points, setPoints] = useState(0);
+  const [streak, setStreak] = useState(0);
   const [hintsLeft, setHintsLeft] = useState(3);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [showExitDialog, setShowExitDialog] = useState(false);
   const [pendingPath, setPendingPath] = useState<string | null>(null);
+  const [usedWordIds, setUsedWordIds] = useState<string[]>([]);
   
   // Profile State
   const [highScore, setHighScore] = useState(0);
@@ -123,11 +124,14 @@ export default function WordGamePage() {
 
   // Scramble Logic
   const scrambleWord = (word: string) => {
+    // Normalisasi input (handle spaces as chars but treat them as a unit if needed)
+    // Untuk Susun Kata, kita pisahkan semua karakter termasuk spasi
     const arr = word.toUpperCase().split("");
     for (let i = arr.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [arr[i], arr[j]] = [arr[j], arr[i]];
     }
+    // Pastikan tidak sama dengan aslinya
     if (arr.join("") === word.toUpperCase() && word.length > 1) {
       return scrambleWord(word);
     }
@@ -135,13 +139,24 @@ export default function WordGamePage() {
   };
 
   const nextLevel = useCallback(() => {
-    const randomIndex = Math.floor(Math.random() * VOCABULARY.length);
-    const wordObj = VOCABULARY[randomIndex];
+    // Filter out used words
+    let availableWords = VOCABULARY.filter(v => !usedWordIds.includes(v.id));
+    
+    // If all words used, reset usedWordIds for a fresh cycle
+    if (availableWords.length === 0) {
+      availableWords = VOCABULARY;
+      setUsedWordIds([]);
+    }
+
+    const randomIndex = Math.floor(Math.random() * availableWords.length);
+    const wordObj = availableWords[randomIndex];
+    
     setCurrentWord(wordObj);
     setScrambled(scrambleWord(wordObj.ngaju));
     setUserInput([]);
     setIsCorrect(null);
-  }, []);
+    setUsedWordIds(prev => [...prev, wordObj.id]);
+  }, [usedWordIds]);
 
   useEffect(() => {
     if (VOCABULARY.length > 0 && !currentWord) {
@@ -178,6 +193,7 @@ export default function WordGamePage() {
         handleWin();
       } else {
         setIsCorrect(false);
+        setStreak(0); // Reset streak on wrong answer
       }
     }
   };
@@ -202,9 +218,29 @@ export default function WordGamePage() {
   };
 
   const handleWin = async () => {
-    const newPoints = points + 2;
+    const wordLen = currentWord.ngaju.length;
+    let basePoints = 1;
+    if (wordLen >= 6 && wordLen <= 8) basePoints = 2;
+    if (wordLen >= 9) basePoints = 3;
+
+    const newStreak = streak + 1;
+    setStreak(newStreak);
+
+    let bonus = 0;
+    if (newStreak === 5) bonus = 5;
+    if (newStreak === 10) bonus = 10;
+
+    const earnedPoints = basePoints + bonus;
+    const newPoints = points + earnedPoints;
     setPoints(newPoints);
     
+    if (bonus > 0) {
+      toast({
+        title: "🔥 Streak Bonus!",
+        description: `Kamu benar ${newStreak} kali berturut-turut! +${bonus} bonus poin.`,
+      });
+    }
+
     let newBadges = [...badges];
     let badgeAdded = false;
     BADGES.forEach(b => {
@@ -217,7 +253,7 @@ export default function WordGamePage() {
     if (badgeAdded) {
       toast({
         title: "🎉 Badge Baru Diperoleh!",
-        description: `Kamu naik ke level baru dan mendapatkan badge!`,
+        description: `Hebat! Kamu mendapatkan badge baru.`,
       });
     }
 
@@ -261,16 +297,25 @@ export default function WordGamePage() {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
+      {/* Header Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <Card className="bg-primary/5 border-none shadow-sm">
-          <CardContent className="p-4 flex items-center gap-4">
-            <div className="bg-primary/10 p-2 rounded-lg">
-              <Trophy className="text-primary w-6 h-6" />
+          <CardContent className="p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="bg-primary/10 p-2 rounded-lg">
+                <Trophy className="text-primary w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-muted-foreground uppercase">Poin</p>
+                <p className="text-2xl font-headline font-bold text-primary">{points}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-xs font-bold text-muted-foreground uppercase">Total Poin</p>
-              <p className="text-2xl font-headline font-bold text-primary">{points}</p>
-            </div>
+            {streak > 0 && (
+              <div className="flex flex-col items-center">
+                <Zap className="w-5 h-5 text-orange-500 fill-orange-500 animate-pulse" />
+                <span className="text-[10px] font-bold text-orange-500">{streak}x</span>
+              </div>
+            )}
           </CardContent>
         </Card>
         
@@ -278,7 +323,7 @@ export default function WordGamePage() {
           <CardContent className="p-4">
             <div className="flex justify-between items-end mb-2">
               <div>
-                <p className="text-xs font-bold text-muted-foreground uppercase">Level Saat Ini</p>
+                <p className="text-xs font-bold text-muted-foreground uppercase">Level</p>
                 <p className="text-lg font-headline font-bold text-primary">{currentLevelInfo.label}</p>
               </div>
               {nextLevelInfo && (
@@ -293,46 +338,58 @@ export default function WordGamePage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Main Game Area */}
         <div className="lg:col-span-2 space-y-6">
           <Card className="shadow-2xl border-none overflow-hidden bg-card">
             <div className="h-2 bg-primary" />
-            <CardHeader className="text-center">
-              <CardTitle className="text-xl text-muted-foreground">Susun Kata Ini:</CardTitle>
-              <CardDescription className="text-2xl font-bold text-foreground">
+            <CardHeader className="text-center relative">
+              {currentWord?.category && (
+                <Badge variant="secondary" className="absolute top-4 right-4 text-[10px] font-bold uppercase tracking-widest bg-primary/10 text-primary border-none">
+                  {currentWord.category}
+                </Badge>
+              )}
+              <CardTitle className="text-xl text-muted-foreground pt-4">Susun Kata Ini:</CardTitle>
+              <CardDescription className="text-3xl font-bold text-foreground">
                 "{currentWord?.indonesian}"
               </CardDescription>
             </CardHeader>
             <CardContent className="p-8 space-y-8">
+              {/* Target Slots */}
               <div className="flex flex-wrap justify-center gap-2 min-h-[60px]">
-                {currentWord?.ngaju.split("").map((_: any, i: number) => (
-                  <div 
-                    key={i}
-                    className={cn(
-                      "w-10 h-12 md:w-12 md:h-14 border-2 rounded-xl flex items-center justify-center text-xl md:text-2xl font-bold transition-all",
-                      userInput[i] ? "border-primary bg-primary/5 text-primary scale-105" : "border-dashed border-muted",
-                      isCorrect === true && "border-primary bg-primary/10 text-primary",
-                      isCorrect === false && "border-destructive bg-destructive/5 text-destructive"
-                    )}
-                  >
-                    {userInput[i]}
-                  </div>
-                ))}
+                {currentWord?.ngaju.split("").map((char: string, i: number) => {
+                  const isSpace = char === " ";
+                  return (
+                    <div 
+                      key={i}
+                      className={cn(
+                        "w-10 h-12 md:w-12 md:h-14 border-2 rounded-xl flex items-center justify-center text-xl md:text-2xl font-bold transition-all",
+                        isSpace ? "border-none bg-transparent" : (userInput[i] ? "border-primary bg-primary/5 text-primary scale-105" : "border-dashed border-muted"),
+                        isCorrect === true && !isSpace && "border-primary bg-primary/10 text-primary",
+                        isCorrect === false && !isSpace && "border-destructive bg-destructive/5 text-destructive"
+                      )}
+                    >
+                      {userInput[i]}
+                    </div>
+                  );
+                })}
               </div>
 
+              {/* Scrambled Letters */}
               <div className="flex flex-wrap justify-center gap-3">
                 {scrambled.map((letter, i) => (
                   <Button
                     key={i}
                     variant="outline"
-                    className="w-12 h-14 md:w-14 md:h-16 text-xl md:text-2xl font-bold rounded-2xl shadow-md hover:scale-110 active:scale-95 transition-all"
+                    className="w-12 h-14 md:w-14 md:h-16 text-xl md:text-2xl font-bold rounded-2xl shadow-md hover:scale-110 active:scale-95 transition-all bg-white border-2 border-primary/20 hover:border-primary text-primary"
                     onClick={() => handleLetterClick(letter, i)}
                     disabled={isCorrect !== null}
                   >
-                    {letter}
+                    {letter === " " ? "_" : letter}
                   </Button>
                 ))}
               </div>
 
+              {/* Feedback UI */}
               {isCorrect === false && (
                 <div className="flex items-center justify-center gap-2 text-destructive font-bold animate-bounce">
                   <AlertTriangle className="w-5 h-5" />
@@ -341,12 +398,16 @@ export default function WordGamePage() {
               )}
 
               {isCorrect === true && (
-                <div className="flex items-center justify-center gap-2 text-primary font-bold text-xl animate-pulse">
-                  <CheckCircle2 className="w-6 h-6" />
-                  Luar Biasa! +2 Poin
+                <div className="flex flex-col items-center justify-center gap-2 text-primary font-bold animate-pulse">
+                  <div className="flex items-center gap-2 text-2xl">
+                    <CheckCircle2 className="w-8 h-8" />
+                    Bagus Sekali!
+                  </div>
+                  <p className="text-sm">+{currentWord.ngaju.length >= 9 ? 3 : currentWord.ngaju.length >= 6 ? 2 : 1} Poin</p>
                 </div>
               )}
             </CardContent>
+            
             <CardFooter className="flex gap-4 p-8 pt-0">
               {isCorrect === true ? (
                 <Button 
@@ -378,8 +439,9 @@ export default function WordGamePage() {
             </CardFooter>
           </Card>
 
-          <Card className="border-none shadow-lg">
-            <CardHeader>
+          {/* Badges Display */}
+          <Card className="border-none shadow-lg bg-white/50">
+            <CardHeader className="pb-2">
               <CardTitle className="text-lg flex items-center gap-2">
                 <Medal className="text-primary w-5 h-5" />
                 Pencapaian Kamu
@@ -390,8 +452,8 @@ export default function WordGamePage() {
                 <p className="text-sm text-muted-foreground italic">Belum ada badge. Terus bermain untuk mendapatkannya!</p>
               ) : (
                 badges.map((b, i) => (
-                  <Badge key={i} className="py-2 px-4 rounded-full text-sm gap-2 bg-primary text-primary-foreground shadow-md">
-                    <span>{BADGES.find(badge => badge.label === b)?.icon}</span>
+                  <Badge key={i} className="py-2 px-4 rounded-full text-xs gap-2 bg-primary text-primary-foreground shadow-md transition-transform hover:scale-105">
+                    <span>{BADGES.find(badge => badge.label === b)?.icon || "🏅"}</span>
                     {b}
                   </Badge>
                 ))
@@ -400,6 +462,7 @@ export default function WordGamePage() {
           </Card>
         </div>
 
+        {/* Leaderboard Sidebar */}
         <div className="space-y-6">
           <Card className="border-none shadow-lg sticky top-24">
             <CardHeader>
@@ -430,13 +493,13 @@ export default function WordGamePage() {
                           {i + 1}
                         </span>
                         <div>
-                          <p className="font-bold text-sm truncate max-w-[120px]">{player.displayName}</p>
-                          <p className="text-[10px] text-muted-foreground uppercase font-bold">{player.level}</p>
+                          <p className="font-bold text-sm truncate max-w-[100px]">{player.displayName}</p>
+                          <p className="text-[9px] text-muted-foreground uppercase font-bold">{player.level}</p>
                         </div>
                       </div>
                       <div className="text-right">
                         <p className="font-headline font-bold text-primary">{player.totalPoints}</p>
-                        <p className="text-[10px] text-muted-foreground">PTS</p>
+                        <p className="text-[9px] text-muted-foreground font-bold">PTS</p>
                       </div>
                     </div>
                   ))
@@ -447,12 +510,13 @@ export default function WordGamePage() {
         </div>
       </div>
 
+      {/* Exit Dialog */}
       <AlertDialog open={showExitDialog} onOpenChange={setShowExitDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Apakah Anda yakin ingin keluar?</AlertDialogTitle>
             <AlertDialogDescription>
-              Progres permainan yang sedang berlangsung pada kata ini akan direset. Poin total dan badge Anda tetap aman.
+              Semua progres permainan yang sedang berlangsung pada kata ini akan direset. Poin total dan badge Anda tetap aman.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
