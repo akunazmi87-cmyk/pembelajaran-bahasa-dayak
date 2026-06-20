@@ -22,10 +22,11 @@ import { useToast } from "@/hooks/use-toast";
 import { translateDayakNgaju } from "@/ai/flows/dayak-ngaju-translator-flow";
 import { textToSpeech } from "@/ai/flows/text-to-speech-flow";
 import { cn } from "@/lib/utils";
-import { collection, addDoc, query, orderBy, limit, onSnapshot, Timestamp, where } from "firebase/firestore";
+import { collection, addDoc, query, orderBy, limit, onSnapshot, Timestamp } from "firebase/firestore";
 import { useFirestore, useCollection } from "@/firebase";
 
 export default function TranslatorPage() {
+  const [mounted, setMounted] = useState(false);
   const [inputText, setInputText] = useState("");
   const [result, setResult] = useState<{ indo: string; ngaju: string; source: 'database' | 'ai' } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -44,6 +45,10 @@ export default function TranslatorPage() {
 
   const vocabQuery = useMemo(() => collection(firestore, "vocabulary"), [firestore]);
   const { data: vocabList } = useCollection<any>(vocabQuery);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleTranslate = async () => {
     if (!inputText.trim()) return;
@@ -118,6 +123,14 @@ export default function TranslatorPage() {
     navigator.clipboard.writeText(text);
     toast({ title: "Berhasil disalin ke papan klip!" });
   };
+
+  if (!mounted) {
+    return (
+      <div className="flex justify-center items-center min-h-[60vh]">
+        <Loader2 className="animate-spin text-primary h-8 w-8" />
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-12 max-w-5xl">
@@ -254,12 +267,12 @@ export default function TranslatorPage() {
                     <div 
                       key={item.id}
                       onClick={() => {
-                        setInputText(item.indonesian);
-                        setResult({ indo: item.indonesian, ngaju: item.ngaju, source: item.source });
+                        setInputText(item.indo);
+                        setResult({ indo: item.indo, ngaju: item.ngaju, source: item.source });
                       }}
                       className="p-3 rounded-xl border hover:border-primary hover:bg-primary/5 cursor-pointer transition-all group"
                     >
-                      <p className="text-xs text-muted-foreground truncate">{item.indonesian}</p>
+                      <p className="text-xs text-muted-foreground truncate">{item.indo}</p>
                       <p className="font-bold text-primary truncate group-hover:text-primary-700">{item.ngaju}</p>
                       <div className="flex justify-between items-center mt-1">
                          <span className="text-[9px] uppercase font-bold text-muted-foreground">

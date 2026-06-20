@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Search, Volume2, Sparkles, ArrowLeftRight, Loader2, Filter } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { useCollection, useFirestore } from "@/firebase";
 import { collection } from "firebase/firestore";
 
 export default function VocabularyPage() {
+  const [mounted, setMounted] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [activeWord, setActiveWord] = useState<any>(null);
@@ -31,6 +32,10 @@ export default function VocabularyPage() {
   const [translatedResult, setTranslatedResult] = useState("");
   const [isTranslating, setIsTranslating] = useState(false);
   const [targetLang, setTargetLang] = useState<"dayak-ngaju" | "indonesian">("dayak-ngaju");
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const categories = useMemo(() => {
     const cats = new Set(vocabList.map(v => v.category));
@@ -74,6 +79,14 @@ export default function VocabularyPage() {
   const playAudio = (word: string) => {
     console.log(`Playing audio for: ${word}`);
   };
+
+  if (!mounted) {
+    return (
+      <div className="flex justify-center items-center min-h-[60vh]">
+        <Loader2 className="animate-spin text-primary h-8 w-8" />
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-12">
