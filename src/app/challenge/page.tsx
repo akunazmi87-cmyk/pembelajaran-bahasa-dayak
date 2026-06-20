@@ -1,13 +1,15 @@
+
 "use client";
 
-import { useState } from "react";
-import { Trophy, CheckCircle2, XCircle, ArrowRight, RefreshCcw } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
+import { Trophy, CheckCircle2, XCircle, ArrowRight, RefreshCcw, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { QUIZ_QUESTIONS } from "@/lib/data";
 import { cn } from "@/lib/utils";
+import { useCollection, useFirestore } from "@/firebase";
+import { collection } from "firebase/firestore";
 
 export default function ChallengePage() {
   const [currentStep, setCurrentStep] = useState(0);
@@ -16,9 +18,43 @@ export default function ChallengePage() {
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [fillValue, setFillValue] = useState("");
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
+  
+  const firestore = useFirestore();
+  const vocabQuery = useMemo(() => collection(firestore, "vocabulary"), [firestore]);
+  const { data: vocabList, loading } = useCollection<any>(vocabQuery);
 
-  const question = QUIZ_QUESTIONS[currentStep];
-  const progress = ((currentStep) / QUIZ_QUESTIONS.length) * 100;
+  // Generate Questions from Firestore Data
+  const quizQuestions = useMemo(() => {
+    if (vocabList.length < 5) return [];
+    
+    // Create 10 random questions
+    const shuffled = [...vocabList].sort(() => 0.5 - Math.random());
+    return shuffled.slice(0, 10).map((v, index) => {
+      const type = index % 2 === 0 ? "mcq" : "fill";
+      if (type === "mcq") {
+        // Find 3 wrong options
+        const others = vocabList.filter(o => o.id !== v.id).sort(() => 0.5 - Math.random()).slice(0, 3);
+        const options = [v.ngaju, ...others.map(o => o.ngaju)].sort(() => 0.5 - Math.random());
+        return {
+          id: v.id,
+          type: "mcq",
+          question: `Apa terjemahan Bahasa Dayak Ngaju dari "${v.indonesian}"?`,
+          options,
+          answer: v.ngaju
+        };
+      } else {
+        return {
+          id: v.id,
+          type: "fill",
+          question: `Lengkapilah: Bahasa Indonesia dari "${v.ngaju}" adalah...`,
+          answer: v.indonesian
+        };
+      }
+    });
+  }, [vocabList]);
+
+  const question = quizQuestions[currentStep];
+  const progress = quizQuestions.length > 0 ? ((currentStep) / quizQuestions.length) * 100 : 0;
 
   const handleOptionSelect = (option: string) => {
     if (isCorrect !== null) return;
@@ -38,7 +74,7 @@ export default function ChallengePage() {
   };
 
   const nextQuestion = () => {
-    if (currentStep < QUIZ_QUESTIONS.length - 1) {
+    if (currentStep < quizQuestions.length - 1) {
       setCurrentStep(currentStep + 1);
       setSelectedOption(null);
       setFillValue("");
@@ -57,8 +93,29 @@ export default function ChallengePage() {
     setIsCorrect(null);
   };
 
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <Loader2 className="w-10 h-10 animate-spin text-primary" />
+        <p className="text-muted-foreground font-medium">Menyiapkan tantangan...</p>
+      </div>
+    );
+  }
+
+  if (quizQuestions.length === 0) {
+    return (
+      <div className="container mx-auto px-4 py-12 max-w-2xl text-center">
+         <Card className="p-8">
+            <h1 className="text-2xl font-bold mb-4">Kosakata tidak cukup</h1>
+            <p className="text-muted-foreground mb-6">Minimal diperlukan 5 kosakata di database untuk memulai tantangan.</p>
+            <Button asChild><a href="/admin">Tambah Kosakata ke Database</a></Button>
+         </Card>
+      </div>
+    );
+  }
+
   if (isFinished) {
-    const percentage = (score / QUIZ_QUESTIONS.length) * 100;
+    const percentage = (score / quizQuestions.length) * 100;
     let message = "Jangan menyerah, ayo belajar lagi!";
     if (percentage >= 80) message = "Luar biasa! Kamu hebat sekali!";
     else if (percentage >= 50) message = "Bagus! Terus berlatih ya.";
@@ -75,7 +132,7 @@ export default function ChallengePage() {
           </div>
           
           <div className="text-6xl font-bold text-primary">
-            {score} <span className="text-2xl text-muted-foreground">/ {QUIZ_QUESTIONS.length}</span>
+            {score} <span className="text-2xl text-muted-foreground">/ {quizQuestions.length}</span>
           </div>
 
           <div className="space-y-4 pt-4">
@@ -95,7 +152,7 @@ export default function ChallengePage() {
     <div className="container mx-auto px-4 py-12 max-w-2xl">
       <div className="mb-8 space-y-4 text-center">
         <div className="flex justify-between items-center text-sm font-bold text-primary uppercase tracking-widest">
-          <span>Pertanyaan {currentStep + 1} dari {QUIZ_QUESTIONS.length}</span>
+          <span>Pertanyaan {currentStep + 1} dari {quizQuestions.length}</span>
           <span>Skor: {score}</span>
         </div>
         <Progress value={progress} className="h-2 shadow-inner" />

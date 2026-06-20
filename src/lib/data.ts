@@ -1,35 +1,36 @@
-export const VOCABULARY = [
-  { id: "1", ngaju: "handipe", indonesian: "Ular", category: "Hewan" },
-  { id: "2", ngaju: "bakei", indonesian: "Monyet", category: "Hewan" },
-  { id: "3", ngaju: "rumah", indonesian: "Rumah", category: "Benda" },
-  { id: "4", ngaju: "batunggang", indonesian: "Pintu", category: "Benda" },
-  { id: "5", ngaju: "basenguk", indonesian: "Jendela", category: "Benda" },
-  { id: "6", ngaju: "kasinga", indonesian: "Gigi", category: "Anggota Tubuh" },
-  { id: "7", ngaju: "biwih", indonesian: "Bibir", category: "Anggota Tubuh" },
-  { id: "8", ngaju: "pinding", indonesian: "Telinga", category: "Anggota Tubuh" },
-  { id: "9", ngaju: "lenge", indonesian: "Tangan", category: "Anggota Tubuh" },
-  { id: "10", ngaju: "pai", indonesian: "Kaki", category: "Anggota Tubuh" },
-  { id: "11", ngaju: "puser", indonesian: "Pusar", category: "Anggota Tubuh" },
-  { id: "12", ngaju: "urung", indonesian: "Hidung", category: "Anggota Tubuh" },
-  { id: "13", ngaju: "uyat", indonesian: "Leher", category: "Anggota Tubuh" },
-  { id: "14", ngaju: "mate", indonesian: "Mata", category: "Anggota Tubuh" },
-  { id: "15", ngaju: "penda", indonesian: "Bawah", category: "Arah" },
-  { id: "16", ngaju: "hunjut", indonesian: "Atas", category: "Arah" },
-  { id: "17", ngaju: "para", indonesian: "Pantat", category: "Anggota Tubuh" },
-  { id: "18", ngaju: "gantau", indonesian: "Kanan", category: "Arah" },
-  { id: "19", ngaju: "sambil", indonesian: "Kiri", category: "Arah" },
-  { id: "20", ngaju: "balajar", indonesian: "Belajar", category: "Kegiatan" },
-  { id: "21", ngaju: "hatalla", indonesian: "Tuhan", category: "Umum" },
-  { id: "22", ngaju: "salamat kuman", indonesian: "Selamat makan", category: "Sapaan" },
-  { id: "23", ngaju: "kuman", indonesian: "Makan", category: "Kegiatan" },
-  { id: "24", ngaju: "buah buah", indonesian: "Hati-hati", category: "Sapaan" },
-  { id: "25", ngaju: "pambelum", indonesian: "Hidup", category: "Umum" },
-  { id: "26", ngaju: "rajin", indonesian: "Rajin", category: "Sifat" },
-  { id: "27", ngaju: "mandui", indonesian: "Mandi", category: "Kegiatan" },
-  { id: "28", ngaju: "batiruh", indonesian: "Tidur", category: "Kegiatan" },
-  { id: "29", ngaju: "misik", indonesian: "Bangun", category: "Kegiatan" },
-  { id: "30", ngaju: "mihup", indonesian: "Minum", category: "Kegiatan" },
-  { id: "31", ngaju: "manyarak", indonesian: "Menyisir", category: "Kegiatan" },
+
+export const INITIAL_VOCABULARY = [
+  { ngaju: "handipe", indonesian: "Ular", category: "Hewan" },
+  { ngaju: "bakei", indonesian: "Monyet", category: "Hewan" },
+  { ngaju: "rumah", indonesian: "Rumah", category: "Benda" },
+  { ngaju: "batunggang", indonesian: "Pintu", category: "Benda" },
+  { ngaju: "basenguk", indonesian: "Jendela", category: "Benda" },
+  { ngaju: "kasinga", indonesian: "Gigi", category: "Anggota Tubuh" },
+  { ngaju: "biwih", indonesian: "Bibir", category: "Anggota Tubuh" },
+  { ngaju: "pinding", indonesian: "Telinga", category: "Anggota Tubuh" },
+  { ngaju: "lenge", indonesian: "Tangan", category: "Anggota Tubuh" },
+  { ngaju: "pai", indonesian: "Kaki", category: "Anggota Tubuh" },
+  { ngaju: "puser", indonesian: "Pusar", category: "Anggota Tubuh" },
+  { ngaju: "urung", indonesian: "Hidung", category: "Anggota Tubuh" },
+  { ngaju: "uyat", indonesian: "Leher", category: "Anggota Tubuh" },
+  { ngaju: "mate", indonesian: "Mata", category: "Anggota Tubuh" },
+  { ngaju: "penda", indonesian: "Bawah", category: "Arah" },
+  { ngaju: "hunjut", indonesian: "Atas", category: "Arah" },
+  { ngaju: "para", indonesian: "Pantat", category: "Anggota Tubuh" },
+  { ngaju: "gantau", indonesian: "Kanan", category: "Arah" },
+  { ngaju: "sambil", indonesian: "Kiri", category: "Arah" },
+  { ngaju: "balajar", indonesian: "Belajar", category: "Kegiatan" },
+  { ngaju: "hatalla", indonesian: "Tuhan", category: "Umum" },
+  { ngaju: "salamat kuman", indonesian: "Selamat makan", category: "Sapaan" },
+  { ngaju: "kuman", indonesian: "Makan", category: "Kegiatan" },
+  { ngaju: "buah buah", indonesian: "Hati-hati", category: "Sapaan" },
+  { ngaju: "pambelum", indonesian: "Hidup", category: "Umum" },
+  { ngaju: "rajin", indonesian: "Rajin", category: "Sifat" },
+  { ngaju: "mandui", indonesian: "Mandi", category: "Kegiatan" },
+  { ngaju: "batiruh", indonesian: "Tidur", category: "Kegiatan" },
+  { ngaju: "misik", indonesian: "Bangun", category: "Kegiatan" },
+  { ngaju: "mihup", indonesian: "Minum", category: "Kegiatan" },
+  { ngaju: "manyarak", indonesian: "Menyisir", category: "Kegiatan" },
 ];
 
 export const CONVERSATIONS = [
@@ -50,28 +51,5 @@ export const CONVERSATIONS = [
       { speaker: "Guru", text: "Tabe anak-anak, aran ku Bapak Iwan.", language: "Dayak Ngaju" },
       { speaker: "Siswa", text: "Tabe Bapak. Aran ku Siti.", language: "Dayak Ngaju" },
     ]
-  }
-];
-
-export const QUIZ_QUESTIONS = [
-  {
-    id: "q1",
-    type: "mcq",
-    question: "Apa arti dari kata 'Kuman'?",
-    options: ["Minum", "Makan", "Tidur", "Lari"],
-    answer: "Makan"
-  },
-  {
-    id: "q2",
-    type: "mcq",
-    question: "Bagaimana cara menyapa 'Apa kabar' dalam Bahasa Dayak Ngaju?",
-    options: ["Narai kabar?", "Tabe kea?", "Ikau narai?", "Aran ku Siti"],
-    answer: "Narai kabar?"
-  },
-  {
-    id: "q3",
-    type: "fill",
-    question: "Lengkapilah dialog ini: 'Kabar _____' (Artinya: Kabar baik)",
-    answer: "bahalap"
   }
 ];

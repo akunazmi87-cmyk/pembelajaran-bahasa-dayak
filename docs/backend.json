@@ -1,6 +1,18 @@
 
 {
   "entities": {
+    "Vocabulary": {
+      "title": "Vocabulary",
+      "description": "Master list of Dayak Ngaju vocabulary",
+      "type": "object",
+      "properties": {
+        "indonesian": { "type": "string" },
+        "ngaju": { "type": "string" },
+        "category": { "type": "string" },
+        "audioUrl": { "type": "string" }
+      },
+      "required": ["indonesian", "ngaju", "category"]
+    },
     "TranslationHistory": {
       "title": "Translation History",
       "description": "Stores user translation history for Dayak Ngaju",
@@ -35,6 +47,10 @@
     "providers": ["google.com"]
   },
   "firestore": {
+    "/vocabulary/{wordId}": {
+      "schema": "#/entities/Vocabulary",
+      "description": "Master vocabulary collection"
+    },
     "/translation_history/{historyId}": {
       "schema": "#/entities/TranslationHistory",
       "description": "User translation history"

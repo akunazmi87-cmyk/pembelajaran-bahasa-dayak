@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { 
   Sparkles, 
   Volume2, 
@@ -12,7 +12,8 @@ import {
   Play, 
   Pause, 
   Square,
-  AlertCircle
+  AlertCircle,
+  Database
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,15 +22,15 @@ import { useToast } from "@/hooks/use-toast";
 import { translateDayakNgaju } from "@/ai/flows/dayak-ngaju-translator-flow";
 import { textToSpeech } from "@/ai/flows/text-to-speech-flow";
 import { cn } from "@/lib/utils";
-import { getFirestore, collection, addDoc, query, orderBy, limit, onSnapshot, Timestamp } from "firebase/firestore";
-import { initializeFirebase } from "@/firebase";
+import { collection, addDoc, query, orderBy, limit, onSnapshot, Timestamp, where } from "firebase/firestore";
+import { useFirestore, useCollection } from "@/firebase";
 
 export default function TranslatorPage() {
   const [inputText, setInputText] = useState("");
   const [result, setResult] = useState<{ indo: string; ngaju: string; source: 'database' | 'ai' } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [history, setHistory] = useState<any[]>([]);
   const { toast } = useToast();
+  const firestore = useFirestore();
 
   // Audio state
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
@@ -37,18 +38,12 @@ export default function TranslatorPage() {
   const [audioState, setAudioState] = useState<'idle' | 'playing' | 'paused'>('idle');
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const { firestore } = initializeFirebase();
+  // Firestore Collections
+  const historyQuery = useMemo(() => query(collection(firestore, "translation_history"), orderBy("timestamp", "desc"), limit(20)), [firestore]);
+  const { data: history } = useCollection<any>(historyQuery);
 
-  // Load History from Firestore
-  useEffect(() => {
-    if (!firestore) return;
-    const q = query(collection(firestore, "translation_history"), orderBy("timestamp", "desc"), limit(20));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setHistory(docs);
-    });
-    return () => unsubscribe();
-  }, [firestore]);
+  const vocabQuery = useMemo(() => collection(firestore, "vocabulary"), [firestore]);
+  const { data: vocabList } = useCollection<any>(vocabQuery);
 
   const handleTranslate = async () => {
     if (!inputText.trim()) return;
@@ -57,6 +52,19 @@ export default function TranslatorPage() {
     setAudioState('idle');
 
     try {
+      // 1. Check local database first (Firestore Collection)
+      const normalizedInput = inputText.toLowerCase().trim();
+      const dbMatch = vocabList.find(v => v.indonesian.toLowerCase() === normalizedInput);
+
+      if (dbMatch) {
+        const newResult = { indo: inputText, ngaju: dbMatch.ngaju, source: 'database' as const };
+        setResult(newResult);
+        saveHistory(newResult);
+        setIsLoading(false);
+        return;
+      }
+
+      // 2. Fallback to AI
       const res = await translateDayakNgaju({ text: inputText, targetLanguage: 'dayak-ngaju' });
       const newResult = { 
         indo: inputText, 
@@ -64,19 +72,19 @@ export default function TranslatorPage() {
         source: res.source as 'database' | 'ai' 
       };
       setResult(newResult);
-
-      // Save to History
-      if (firestore) {
-        addDoc(collection(firestore, "translation_history"), {
-          ...newResult,
-          timestamp: Timestamp.now()
-        });
-      }
+      saveHistory(newResult);
     } catch (error) {
       toast({ variant: "destructive", title: "Gagal menerjemahkan" });
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const saveHistory = (data: any) => {
+    addDoc(collection(firestore, "translation_history"), {
+      ...data,
+      timestamp: Timestamp.now()
+    });
   };
 
   const handleTTS = async (text: string) => {
@@ -116,14 +124,13 @@ export default function TranslatorPage() {
       <header className="mb-12 text-center space-y-4">
         <h1 className="text-4xl font-headline font-bold text-primary">Penerjemah Bahasa Dayak Ngaju</h1>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-          Membantu siswa dan pemandu sekolah berkomunikasi dengan tamu dalam Bahasa Dayak Ngaju yang santun.
+          Single Source of Truth: Terhubung langsung dengan Database Kosakata Sekolah.
         </p>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Main Translator Section */}
         <div className="lg:col-span-2 space-y-6">
-          <Card className="shadow-2xl border-none overflow-hidden">
+          <Card className="shadow-2xl border-none overflow-hidden bg-white">
             <div className="h-2 bg-primary" />
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -134,14 +141,14 @@ export default function TranslatorPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <Input 
-                placeholder="Masukkan teks Bahasa Indonesia... (Contoh: Selamat pagi)"
+                placeholder="Masukkan teks Bahasa Indonesia..."
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleTranslate()}
                 className="h-14 text-lg border-2 focus-visible:ring-primary shadow-inner"
               />
               <Button 
-                className="w-full h-12 text-lg rounded-full font-bold shadow-lg transition-transform active:scale-95"
+                className="w-full h-12 text-lg rounded-full font-bold shadow-lg"
                 onClick={handleTranslate}
                 disabled={isLoading || !inputText.trim()}
               >
@@ -151,7 +158,7 @@ export default function TranslatorPage() {
           </Card>
 
           {result && (
-            <Card className="animate-in fade-in slide-in-from-bottom-4 shadow-2xl border-primary/20 bg-card/50 backdrop-blur-sm">
+            <Card className="animate-in fade-in slide-in-from-bottom-4 shadow-2xl border-primary/20 bg-card">
               <CardContent className="p-8 space-y-8">
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
@@ -168,17 +175,16 @@ export default function TranslatorPage() {
                     <div className="flex items-center gap-3">
                       <span className="text-xs font-bold uppercase tracking-widest text-primary">Dayak Ngaju</span>
                       <span className={cn(
-                        "text-[10px] px-2 py-0.5 rounded-full font-bold uppercase",
+                        "text-[10px] px-2 py-0.5 rounded-full font-bold uppercase flex items-center gap-1",
                         result.source === 'database' ? "bg-primary text-white" : "bg-amber-200 text-amber-800"
                       )}>
+                        {result.source === 'database' ? <Database className="w-3 h-3" /> : <Sparkles className="w-3 h-3" />}
                         {result.source === 'database' ? "Terjemahan Database" : "Terjemahan AI"}
                       </span>
                     </div>
-                    <div className="flex gap-2">
-                      <Button variant="ghost" size="icon" onClick={() => copyToClipboard(result.ngaju)}>
-                        <Copy className="w-4 h-4 text-primary" />
-                      </Button>
-                    </div>
+                    <Button variant="ghost" size="icon" onClick={() => copyToClipboard(result.ngaju)}>
+                      <Copy className="w-4 h-4 text-primary" />
+                    </Button>
                   </div>
                   
                   <p className="text-3xl font-headline font-bold text-primary leading-tight">
@@ -188,11 +194,10 @@ export default function TranslatorPage() {
                   {result.source === 'ai' && (
                     <div className="flex items-center gap-2 text-xs text-amber-700 font-bold bg-amber-50 p-2 rounded-lg mt-4 border border-amber-200">
                       <AlertCircle className="w-4 h-4" />
-                      Hasil AI mungkin memerlukan verifikasi guru atau penutur asli.
+                      Kosakata belum tersedia dalam database lokal. Hasil AI mungkin memerlukan verifikasi.
                     </div>
                   )}
 
-                  {/* Audio Controls */}
                   <div className="flex items-center gap-4 pt-6 mt-6 border-t">
                     <Button 
                       onClick={() => handleTTS(result.ngaju)}
@@ -227,7 +232,6 @@ export default function TranslatorPage() {
           )}
         </div>
 
-        {/* History Sidebar */}
         <div className="space-y-6">
           <Card className="shadow-lg border-none bg-white h-[calc(100vh-200px)] sticky top-24 flex flex-col">
             <CardHeader className="flex-row items-center justify-between space-y-0">
