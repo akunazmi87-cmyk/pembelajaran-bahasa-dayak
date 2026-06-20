@@ -4,7 +4,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Book, MessageSquare, Trophy, Home, Languages, Gamepad2, Settings } from "lucide-react";
+import { Book, MessageSquare, Trophy, Home, Languages, Gamepad2 } from "lucide-react";
 
 const navItems = [
   { name: "Beranda", href: "/", icon: Home },
@@ -13,7 +13,6 @@ const navItems = [
   { name: "Percakapan", href: "/conversation", icon: MessageSquare },
   { name: "Susun Kata", href: "/word-game", icon: Gamepad2 },
   { name: "Tantangan", href: "/challenge", icon: Trophy },
-  { name: "Admin", href: "/admin", icon: Settings },
 ];
 
 export function Navbar() {

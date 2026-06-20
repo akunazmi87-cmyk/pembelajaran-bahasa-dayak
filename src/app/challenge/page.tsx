@@ -8,8 +8,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
-import { useCollection, useFirestore } from "@/firebase";
-import { collection } from "firebase/firestore";
+import { INITIAL_VOCABULARY } from "@/lib/data";
 
 export default function ChallengePage() {
   const [mounted, setMounted] = useState(false);
@@ -20,28 +19,21 @@ export default function ChallengePage() {
   const [fillValue, setFillValue] = useState("");
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   
-  const firestore = useFirestore();
-  const vocabQuery = useMemo(() => collection(firestore, "vocabulary"), [firestore]);
-  const { data: vocabList, loading } = useCollection<any>(vocabQuery);
-
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Generate Questions from Firestore Data
+  // Generate Questions from Static Data
   const quizQuestions = useMemo(() => {
-    if (!mounted || vocabList.length < 5) return [];
+    if (!mounted) return [];
     
-    // Create 10 random questions
-    const shuffled = [...vocabList].sort(() => 0.5 - Math.random());
+    const shuffled = [...INITIAL_VOCABULARY].sort(() => 0.5 - Math.random());
     return shuffled.slice(0, 10).map((v, index) => {
       const type = index % 2 === 0 ? "mcq" : "fill";
       if (type === "mcq") {
-        // Find 3 wrong options
-        const others = vocabList.filter(o => o.id !== v.id).sort(() => 0.5 - Math.random()).slice(0, 3);
+        const others = INITIAL_VOCABULARY.filter(o => o.ngaju !== v.ngaju).sort(() => 0.5 - Math.random()).slice(0, 3);
         const options = [v.ngaju, ...others.map(o => o.ngaju)].sort(() => 0.5 - Math.random());
         return {
-          id: v.id,
           type: "mcq",
           question: `Apa terjemahan Bahasa Dayak Ngaju dari "${v.indonesian}"?`,
           options,
@@ -49,14 +41,13 @@ export default function ChallengePage() {
         };
       } else {
         return {
-          id: v.id,
           type: "fill",
-          question: `Lengkapilah: Bahasa Indonesia dari "${v.ngaju}" adalah...`,
+          question: `Bahasa Indonesia dari "${v.ngaju}" adalah...`,
           answer: v.indonesian
         };
       }
     });
-  }, [vocabList, mounted]);
+  }, [mounted]);
 
   const question = quizQuestions[currentStep];
   const progress = quizQuestions.length > 0 ? ((currentStep) / quizQuestions.length) * 100 : 0;
@@ -98,23 +89,11 @@ export default function ChallengePage() {
     setIsCorrect(null);
   };
 
-  if (!mounted || loading) {
+  if (!mounted) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
         <Loader2 className="w-10 h-10 animate-spin text-primary" />
         <p className="text-muted-foreground font-medium">Menyiapkan tantangan...</p>
-      </div>
-    );
-  }
-
-  if (quizQuestions.length === 0) {
-    return (
-      <div className="container mx-auto px-4 py-12 max-w-2xl text-center">
-         <Card className="p-8">
-            <h1 className="text-2xl font-bold mb-4">Kosakata tidak cukup</h1>
-            <p className="text-muted-foreground mb-6">Minimal diperlukan 5 kosakata di database untuk memulai tantangan.</p>
-            <Button asChild><a href="/admin">Tambah Kosakata ke Database</a></Button>
-         </Card>
       </div>
     );
   }
@@ -167,11 +146,11 @@ export default function ChallengePage() {
         <div className="h-2 bg-primary" />
         <CardHeader className="p-8">
           <CardTitle className="text-2xl font-headline leading-relaxed text-center text-primary">
-            {question.question}
+            {question?.question}
           </CardTitle>
         </CardHeader>
         <CardContent className="px-8 pb-8">
-          {question.type === "mcq" ? (
+          {question?.type === "mcq" ? (
             <div className="grid grid-cols-1 gap-4">
               {question.options?.map((option, idx) => (
                 <button
@@ -217,7 +196,7 @@ export default function ChallengePage() {
             <Button 
               className="w-full h-12 text-lg rounded-full shadow-lg" 
               onClick={checkAnswer}
-              disabled={question.type === "mcq" ? !selectedOption : !fillValue.trim()}
+              disabled={question?.type === "mcq" ? !selectedOption : !fillValue.trim()}
             >
               Periksa Jawaban
             </Button>
