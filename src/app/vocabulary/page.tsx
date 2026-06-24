@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { vocabularyContextualizer } from "@/ai/flows/vocabulary-contextualizer-flow";
 import { translateDayakNgaju } from "@/ai/flows/dayak-ngaju-translator-flow";
 import { useToast } from "@/hooks/use-toast";
+import { useCollection, useFirestore } from "@/firebase";
+import { collection } from "firebase/firestore";
 import { INITIAL_VOCABULARY } from "@/lib/data";
 
 export default function VocabularyPage() {
@@ -21,7 +23,10 @@ export default function VocabularyPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
 
-  // Translation state
+  const firestore = useFirestore();
+  const vocabQuery = useMemo(() => collection(firestore, "vocabulary"), [firestore]);
+  const { data: vocabFromDb, loading: dbLoading } = useCollection<any>(vocabQuery);
+
   const [translateText, setTranslateText] = useState("");
   const [translatedResult, setTranslatedResult] = useState("");
   const [isTranslating, setIsTranslating] = useState(false);
@@ -31,33 +36,38 @@ export default function VocabularyPage() {
     setMounted(true);
   }, []);
 
+  const combinedVocab = useMemo(() => {
+    if (!mounted) return [];
+    const dbWords = vocabFromDb || [];
+    const dbIds = new Set(dbWords.map(w => `${w.ngaju}-${w.indonesian}`.toLowerCase()));
+    const staticWords = INITIAL_VOCABULARY.filter(w => !dbIds.has(`${w.ngaju}-${w.indonesian}`.toLowerCase()));
+    return [...dbWords, ...staticWords];
+  }, [vocabFromDb, mounted]);
+
   const categories = useMemo(() => {
-    const cats = new Set(INITIAL_VOCABULARY.map(v => v.category));
+    const cats = new Set(combinedVocab.map(v => v.category));
     return Array.from(cats).sort();
-  }, []);
+  }, [combinedVocab]);
 
   const filteredVocab = useMemo(() => {
-    return INITIAL_VOCABULARY.filter(v => {
+    return combinedVocab.filter(v => {
       const matchesSearch = v.ngaju?.toLowerCase().includes(searchQuery.toLowerCase()) || 
                            v.indonesian?.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesCategory = selectedCategory ? v.category === selectedCategory : true;
       return matchesSearch && matchesCategory;
     }).sort((a, b) => a.ngaju.localeCompare(b.ngaju));
-  }, [searchQuery, selectedCategory]);
+  }, [searchQuery, selectedCategory, combinedVocab]);
 
   const handleTranslate = async () => {
     if (!translateText.trim()) return;
     setIsTranslating(true);
     try {
-      // Local database check first
       const normalizedInput = translateText.toLowerCase().trim();
-      let match = null;
-      
-      if (targetLang === "dayak-ngaju") {
-        match = INITIAL_VOCABULARY.find(v => v.indonesian.toLowerCase() === normalizedInput);
-      } else {
-        match = INITIAL_VOCABULARY.find(v => v.ngaju.toLowerCase() === normalizedInput);
-      }
+      let match = combinedVocab.find(v => 
+        targetLang === "dayak-ngaju" 
+          ? v.indonesian.toLowerCase() === normalizedInput
+          : v.ngaju.toLowerCase() === normalizedInput
+      );
 
       if (match) {
         setTranslatedResult(targetLang === "dayak-ngaju" ? match.ngaju : match.indonesian);
@@ -85,8 +95,12 @@ export default function VocabularyPage() {
   };
 
   const playAudio = (word: any) => {
-    console.log(`Playing simulated audio for: ${word.ngaju}`);
-    // In a real app, this would play a sound file
+    if (word.audioUrl) {
+      const audio = new Audio(word.audioUrl);
+      audio.play().catch(() => toast({ title: "Audio tidak dapat diputar", variant: "destructive" }));
+    } else {
+      toast({ title: "Audio pelafalan belum tersedia untuk kata ini." });
+    }
   };
 
   if (!mounted) return null;
@@ -96,7 +110,7 @@ export default function VocabularyPage() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
         <div>
           <h1 className="text-4xl font-headline font-bold mb-2 text-primary">Ruang Kosakata</h1>
-          <p className="text-muted-foreground">Pelajari kata-kata dasar dalam Bahasa Dayak Ngaju.</p>
+          <p className="text-muted-foreground">Pelajari kata-kata dasar dari database dinamis.</p>
         </div>
         <div className="relative w-full md:w-80">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
@@ -133,7 +147,12 @@ export default function VocabularyPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-          {filteredVocab.length === 0 ? (
+          {dbLoading ? (
+            <div className="col-span-full py-20 text-center">
+              <Loader2 className="animate-spin inline-block h-8 w-8 text-primary" />
+              <p className="mt-2 text-muted-foreground">Memuat database...</p>
+            </div>
+          ) : filteredVocab.length === 0 ? (
             <div className="col-span-full py-20 text-center text-muted-foreground italic bg-muted/20 rounded-3xl">
               Kosakata tidak ditemukan.
             </div>

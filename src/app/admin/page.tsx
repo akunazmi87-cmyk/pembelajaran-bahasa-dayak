@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Plus, Edit2, Trash2, Search, Loader2, Database, Save, LogOut, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -42,6 +42,7 @@ export default function AdminDashboardPage() {
   }, [router]);
 
   const filteredVocab = useMemo(() => {
+    if (!vocabList) return [];
     return vocabList.filter(v => 
       v.ngaju?.toLowerCase().includes(searchQuery.toLowerCase()) || 
       v.indonesian?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -103,7 +104,7 @@ export default function AdminDashboardPage() {
   };
 
   const handleSeedData = async () => {
-    if (!confirm("Impor data awal dari sistem?")) return;
+    if (!confirm("Impor 31 kosakata awal ke database? (Gunakan jika database kosong)")) return;
     setIsSaving(true);
     try {
       const batch = writeBatch(firestore);
@@ -127,10 +128,10 @@ export default function AdminDashboardPage() {
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
         <div>
           <h1 className="text-4xl font-headline font-bold mb-2">Dashboard Admin</h1>
-          <p className="text-muted-foreground">Kelola database kosakata dan audio pembelajaran.</p>
+          <p className="text-muted-foreground">Kelola database kosakata secara dinamis.</p>
         </div>
-        <div className="flex gap-4">
-          <Button variant="outline" onClick={handleSeedData} disabled={isSaving}>
+        <div className="flex flex-wrap gap-4">
+          <Button variant="outline" onClick={handleSeedData} disabled={isSaving || loading}>
             <Database className="mr-2 h-4 w-4" /> Impor Data Awal
           </Button>
           <Button onClick={() => handleOpenDialog()} className="rounded-full shadow-lg">
@@ -143,8 +144,8 @@ export default function AdminDashboardPage() {
       </header>
 
       <Card className="shadow-xl border-none overflow-hidden bg-white">
-        <div className="p-4 border-b bg-muted/30 flex items-center justify-between gap-4">
-          <div className="relative flex-1">
+        <div className="p-4 border-b bg-muted/30 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="relative flex-1 w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input 
               placeholder="Cari kata atau kategori..." 
@@ -154,10 +155,10 @@ export default function AdminDashboardPage() {
             />
           </div>
           <div className="text-sm font-bold text-primary">
-            Total: {vocabList.length} Kata
+            Total: {vocabList?.length || 0} Kata
           </div>
         </div>
-        <CardContent className="p-0 overflow-x-auto">
+        <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -209,7 +210,7 @@ export default function AdminDashboardPage() {
               )}
             </TableBody>
           </Table>
-        </CardContent>
+        </div>
       </Card>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -217,7 +218,7 @@ export default function AdminDashboardPage() {
           <DialogHeader>
             <DialogTitle>{editingWord ? "Edit Kosakata" : "Tambah Kosakata Baru"}</DialogTitle>
             <DialogDescription>
-              Isi data di bawah ini. Perubahan akan langsung muncul di seluruh fitur website.
+              Perubahan akan langsung muncul di seluruh fitur website.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -264,7 +265,7 @@ export default function AdminDashboardPage() {
                 placeholder="https://example.com/audio.mp3"
               />
               <p className="text-[10px] text-muted-foreground flex items-center gap-1">
-                <Info className="w-3 h-3" /> Gunakan URL audio .mp3 atau .wav jika tersedia.
+                <Info className="w-3 h-3" /> Masukkan link file audio .mp3 jika tersedia.
               </p>
             </div>
           </div>

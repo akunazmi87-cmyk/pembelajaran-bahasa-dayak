@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Lock, LogIn, AlertCircle, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,18 +12,24 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 export default function AdminLoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [mounted, setMounted] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     if (password === "Admin_2") {
-      // Simple session simulation
       localStorage.setItem("admin_auth", "true");
       router.push("/admin");
     } else {
       setError("Password yang Anda masukkan salah.");
     }
   };
+
+  if (!mounted) return null;
 
   return (
     <div className="container mx-auto px-4 py-20 flex justify-center items-center min-h-[80vh]">
@@ -35,7 +41,7 @@ export default function AdminLoginPage() {
           </div>
           <CardTitle className="text-2xl font-headline font-bold">Masuk Admin</CardTitle>
           <CardDescription>
-            Hanya Admin (Guru) yang dapat mengelola data kosakata.
+            Masukkan kata sandi untuk mengelola database kosakata.
           </CardDescription>
         </CardHeader>
         <CardContent>

@@ -17,6 +17,8 @@ import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { INITIAL_VOCABULARY } from "@/lib/data";
+import { useCollection, useFirestore } from "@/firebase";
+import { collection } from "firebase/firestore";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -28,7 +30,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useRouter } from "next/navigation";
 
-// Game Constants
 const LEVELS = [
   { min: 0, label: "Pemula" },
   { min: 10, label: "Amatir" },
@@ -45,8 +46,15 @@ export default function WordGamePage() {
   const [mounted, setMounted] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
+  const firestore = useFirestore();
+  const vocabQuery = useMemo(() => collection(firestore, "vocabulary"), [firestore]);
+  const { data: dbVocab, loading: dbLoading } = useCollection<any>(vocabQuery);
 
-  // Game State
+  const combinedVocab = useMemo(() => {
+    if (!mounted) return [];
+    return [...(dbVocab || []), ...INITIAL_VOCABULARY];
+  }, [dbVocab, mounted]);
+
   const [currentWord, setCurrentWord] = useState<any>(null);
   const [scrambled, setScrambled] = useState<string[]>([]);
   const [userInput, setUserInput] = useState<string[]>([]);
@@ -59,7 +67,6 @@ export default function WordGamePage() {
     setMounted(true);
   }, []);
 
-  // Scramble Logic
   const scrambleWord = (word: string) => {
     const arr = word.toUpperCase().split("");
     for (let i = arr.length - 1; i > 0; i--) {
@@ -73,20 +80,21 @@ export default function WordGamePage() {
   };
 
   const nextLevel = useCallback(() => {
-    const randomIndex = Math.floor(Math.random() * INITIAL_VOCABULARY.length);
-    const wordObj = INITIAL_VOCABULARY[randomIndex];
+    if (combinedVocab.length === 0) return;
+    const randomIndex = Math.floor(Math.random() * combinedVocab.length);
+    const wordObj = combinedVocab[randomIndex];
     
     setCurrentWord(wordObj);
     setScrambled(scrambleWord(wordObj.ngaju));
     setUserInput([]);
     setIsCorrect(null);
-  }, []);
+  }, [combinedVocab]);
 
   useEffect(() => {
-    if (mounted && !currentWord) {
+    if (mounted && !currentWord && combinedVocab.length > 0) {
       nextLevel();
     }
-  }, [mounted, currentWord, nextLevel]);
+  }, [mounted, currentWord, nextLevel, combinedVocab]);
 
   const handleLetterClick = (letter: string, index: number) => {
     if (isCorrect !== null) return;
@@ -180,83 +188,90 @@ export default function WordGamePage() {
           <Progress value={progressValue} className="h-2 shadow-inner" />
         </div>
 
-        <Card className="shadow-2xl border-none overflow-hidden bg-white">
-          <div className="h-2 bg-primary" />
-          <CardHeader className="text-center">
-            <CardTitle className="text-xl text-muted-foreground pt-4">Susun Kosakata {currentWord?.category}:</CardTitle>
-            <CardDescription className="text-3xl font-bold text-foreground">
-              "{currentWord?.indonesian}"
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-8 space-y-8">
-            <div className="flex flex-wrap justify-center gap-2 min-h-[60px]">
-              {currentWord?.ngaju.split("").map((char: string, i: number) => (
-                <div 
-                  key={i}
-                  className={cn(
-                    "w-10 h-12 md:w-12 md:h-14 border-2 rounded-xl flex items-center justify-center text-xl md:text-2xl font-bold transition-all",
-                    userInput[i] ? "border-primary bg-primary/5 text-primary scale-105" : "border-dashed border-muted",
-                    isCorrect === true && "border-primary bg-primary/10 text-primary",
-                    isCorrect === false && "border-destructive bg-destructive/5 text-destructive"
-                  )}
-                >
-                  {userInput[i]}
-                </div>
-              ))}
-            </div>
+        {dbLoading && !currentWord ? (
+          <div className="text-center py-20">
+            <Loader2 className="animate-spin h-10 w-10 mx-auto text-primary" />
+            <p className="mt-4 text-muted-foreground">Memuat Database Game...</p>
+          </div>
+        ) : (
+          <Card className="shadow-2xl border-none overflow-hidden bg-white">
+            <div className="h-2 bg-primary" />
+            <CardHeader className="text-center">
+              <CardTitle className="text-xl text-muted-foreground pt-4">Susun Kosakata {currentWord?.category}:</CardTitle>
+              <CardDescription className="text-3xl font-bold text-foreground">
+                "{currentWord?.indonesian}"
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-8 space-y-8">
+              <div className="flex flex-wrap justify-center gap-2 min-h-[60px]">
+                {currentWord?.ngaju.split("").map((char: string, i: number) => (
+                  <div 
+                    key={i}
+                    className={cn(
+                      "w-10 h-12 md:w-12 md:h-14 border-2 rounded-xl flex items-center justify-center text-xl md:text-2xl font-bold transition-all",
+                      userInput[i] ? "border-primary bg-primary/5 text-primary scale-105" : "border-dashed border-muted",
+                      isCorrect === true && "border-primary bg-primary/10 text-primary",
+                      isCorrect === false && "border-destructive bg-destructive/5 text-destructive"
+                    )}
+                  >
+                    {userInput[i]}
+                  </div>
+                ))}
+              </div>
 
-            <div className="flex flex-wrap justify-center gap-3">
-              {scrambled.map((letter, i) => (
-                <Button
-                  key={i}
-                  variant="outline"
-                  className="w-12 h-14 md:w-14 md:h-16 text-xl md:text-2xl font-bold rounded-2xl shadow-md transition-all bg-white border-2 border-primary/20 hover:border-primary text-primary"
-                  onClick={() => handleLetterClick(letter, i)}
-                  disabled={isCorrect !== null}
+              <div className="flex flex-wrap justify-center gap-3">
+                {scrambled.map((letter, i) => (
+                  <Button
+                    key={i}
+                    variant="outline"
+                    className="w-12 h-14 md:w-14 md:h-16 text-xl md:text-2xl font-bold rounded-2xl shadow-md transition-all bg-white border-2 border-primary/20 hover:border-primary text-primary"
+                    onClick={() => handleLetterClick(letter, i)}
+                    disabled={isCorrect !== null}
+                  >
+                    {letter}
+                  </Button>
+                ))}
+              </div>
+
+              {isCorrect === false && (
+                <div className="flex items-center justify-center gap-2 text-destructive font-bold animate-bounce">
+                  <AlertTriangle className="w-5 h-5" />
+                  Salah! Ayo coba lagi.
+                </div>
+              )}
+
+              {isCorrect === true && (
+                <div className="flex flex-col items-center justify-center gap-2 text-primary font-bold animate-pulse">
+                  <div className="flex items-center gap-2 text-2xl">
+                    <CheckCircle2 className="w-8 h-8" />
+                    Bagus Sekali!
+                  </div>
+                  {streak > 0 && <span className="text-orange-500 flex items-center gap-1"><Zap className="w-4 h-4 fill-current"/> {streak} Streak!</span>}
+                </div>
+              )}
+            </CardContent>
+            
+            <CardFooter className="flex gap-4 p-8 pt-0">
+              {isCorrect === true ? (
+                <Button 
+                  className="w-full h-14 text-lg rounded-full gap-2 shadow-lg"
+                  onClick={nextLevel}
                 >
-                  {letter}
+                  Lanjut <ArrowRight className="w-5 h-5" />
                 </Button>
-              ))}
-            </div>
-
-            {isCorrect === false && (
-              <div className="flex items-center justify-center gap-2 text-destructive font-bold animate-bounce">
-                <AlertTriangle className="w-5 h-5" />
-                Salah! Ayo coba lagi.
-              </div>
-            )}
-
-            {isCorrect === true && (
-              <div className="flex flex-col items-center justify-center gap-2 text-primary font-bold animate-pulse">
-                <div className="flex items-center gap-2 text-2xl">
-                  <CheckCircle2 className="w-8 h-8" />
-                  Bagus Sekali!
-                </div>
-                {streak > 0 && <span className="text-orange-500 flex items-center gap-1"><Zap className="w-4 h-4 fill-current"/> {streak} Streak!</span>}
-              </div>
-            )}
-          </CardContent>
-          
-          <CardFooter className="flex gap-4 p-8 pt-0">
-            {isCorrect === true ? (
-              <Button 
-                className="w-full h-14 text-lg rounded-full gap-2 shadow-lg"
-                onClick={nextLevel}
-              >
-                Lanjut <ArrowRight className="w-5 h-5" />
-              </Button>
-            ) : (
-              <Button 
-                variant="outline" 
-                className="w-full h-12 rounded-full border-primary text-primary hover:bg-primary/5"
-                onClick={resetInput}
-                disabled={userInput.length === 0}
-              >
-                <RotateCcw className="mr-2 w-4 h-4" /> Reset Huruf
-              </Button>
-            )}
-          </CardFooter>
-        </Card>
+              ) : (
+                <Button 
+                  variant="outline" 
+                  className="w-full h-12 rounded-full border-primary text-primary hover:bg-primary/5"
+                  onClick={resetInput}
+                  disabled={userInput.length === 0}
+                >
+                  <RotateCcw className="mr-2 w-4 h-4" /> Reset Huruf
+                </Button>
+              )}
+            </CardFooter>
+          </Card>
+        )}
       </div>
 
       <AlertDialog open={showExitDialog} onOpenChange={setShowExitDialog}>

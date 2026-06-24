@@ -1,19 +1,16 @@
 
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { 
   Sparkles, 
-  Volume2, 
   Copy, 
-  Trash2, 
   Loader2, 
   Play, 
   Pause, 
   Square,
   AlertCircle,
-  Database,
-  Info
+  Database
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,9 +19,10 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { translateDayakNgaju } from "@/ai/flows/dayak-ngaju-translator-flow";
 import { textToSpeech } from "@/ai/flows/text-to-speech-flow";
-import { cn } from "@/lib/utils";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useCollection, useFirestore } from "@/firebase";
+import { collection } from "firebase/firestore";
 import { INITIAL_VOCABULARY } from "@/lib/data";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function TranslatorPage() {
   const [mounted, setMounted] = useState(false);
@@ -33,7 +31,15 @@ export default function TranslatorPage() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  // Audio state
+  const firestore = useFirestore();
+  const vocabQuery = useMemo(() => collection(firestore, "vocabulary"), [firestore]);
+  const { data: dbVocab } = useCollection<any>(vocabQuery);
+
+  const combinedVocab = useMemo(() => {
+    if (!mounted) return [];
+    return [...(dbVocab || []), ...INITIAL_VOCABULARY];
+  }, [dbVocab, mounted]);
+
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [isAudioLoading, setIsAudioLoading] = useState(false);
   const [audioState, setAudioState] = useState<'idle' | 'playing' | 'paused'>('idle');
@@ -51,12 +57,12 @@ export default function TranslatorPage() {
 
     try {
       const normalizedInput = inputText.toLowerCase().trim();
-      const localMatch = INITIAL_VOCABULARY.find(v => v.indonesian.toLowerCase() === normalizedInput);
+      const match = combinedVocab.find(v => v.indonesian.toLowerCase() === normalizedInput);
       
-      if (localMatch) {
+      if (match) {
         setResult({ 
           indo: inputText, 
-          ngaju: localMatch.ngaju, 
+          ngaju: match.ngaju, 
           source: 'database' 
         });
       } else {
@@ -113,7 +119,7 @@ export default function TranslatorPage() {
       <header className="mb-12 text-center space-y-4">
         <h1 className="text-4xl font-headline font-bold text-primary">Penerjemah Bahasa Dayak Ngaju</h1>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-          Terjemahkan kata atau kalimat sederhana dari Bahasa Indonesia ke Bahasa Dayak Ngaju.
+          Terjemahkan kalimat dengan prioritas database lokal yang dikelola Admin.
         </p>
       </header>
 
