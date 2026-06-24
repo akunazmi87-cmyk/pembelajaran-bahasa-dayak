@@ -52,12 +52,13 @@ const SCHOOL_DATABASE: Record<string, string> = {
   "bangun": "misik",
   "minum": "mihup",
   "menyisir": "manyarak",
-  "selamat datang di sekolah kami": "tabe, selamat dumah hong sakula itah",
-  "apa yang bisa saya bantu?": "narai je tau nampa bantuan?",
-  "terima kasih": "tarima kasih",
-  "halo": "tabe",
-  "selamat pagi": "selamat hanjewu",
 };
+
+// Reverse Database for Dayak Ngaju to Indonesian lookup
+const REVERSE_SCHOOL_DATABASE: Record<string, string> = Object.entries(SCHOOL_DATABASE).reduce((acc, [key, value]) => {
+  acc[value.toLowerCase()] = key;
+  return acc;
+}, {} as Record<string, string>);
 
 export async function translateDayakNgaju(input: TranslationInput): Promise<TranslationOutput> {
   return dayakNgajuTranslationFlow(input);
@@ -68,12 +69,12 @@ const dayakNgajuTranslationPrompt = ai.definePrompt({
   input: { schema: TranslationInputSchema },
   output: { schema: z.object({ translatedText: z.string() }) },
   prompt: `You are a linguist specializing in Dayak Ngaju and Indonesian.
-Translate the following Indonesian text to Dayak Ngaju.
-If the input is already Dayak Ngaju and the target is Indonesian, translate accordingly.
+If targetLanguage is 'dayak-ngaju', translate the Indonesian text to Dayak Ngaju.
+If targetLanguage is 'indonesian', translate the Dayak Ngaju text to Indonesian.
 
-Only return the translation result.
+Only return the translated text result without any explanations.
 
-Text: {{{text}}}
+Text to translate: {{{text}}}
 Target Language: {{{targetLanguage}}}`,
 });
 
@@ -85,16 +86,26 @@ const dayakNgajuTranslationFlow = ai.defineFlow(
   },
   async (input) => {
     const normalizedInput = input.text.toLowerCase().trim();
-    
-    // Check local database first
-    if (SCHOOL_DATABASE[normalizedInput]) {
-      return {
-        translatedText: SCHOOL_DATABASE[normalizedInput],
-        source: 'database'
-      };
+    const target = input.targetLanguage;
+
+    // 1. Check Database first
+    if (target === 'dayak-ngaju') {
+      if (SCHOOL_DATABASE[normalizedInput]) {
+        return {
+          translatedText: SCHOOL_DATABASE[normalizedInput],
+          source: 'database'
+        };
+      }
+    } else {
+      if (REVERSE_SCHOOL_DATABASE[normalizedInput]) {
+        return {
+          translatedText: REVERSE_SCHOOL_DATABASE[normalizedInput],
+          source: 'database'
+        };
+      }
     }
 
-    // Fallback to AI
+    // 2. Fallback to AI if not found in local database
     const { output } = await dayakNgajuTranslationPrompt(input);
     return {
       translatedText: output!.translatedText,
