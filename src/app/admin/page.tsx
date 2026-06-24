@@ -69,7 +69,10 @@ export default function AdminDashboardPage() {
   };
 
   const handleSave = async () => {
-    if (!formData.indonesian || !formData.ngaju) return;
+    if (!formData.indonesian || !formData.ngaju) {
+      toast({ variant: "destructive", title: "Lengkapi data kosakata!" });
+      return;
+    }
     setIsSaving(true);
     try {
       if (editingWord) {
@@ -81,7 +84,7 @@ export default function AdminDashboardPage() {
       }
       setIsDialogOpen(false);
     } catch (error) {
-      toast({ variant: "destructive", title: "Gagal menyimpan data" });
+      toast({ variant: "destructive", title: "Gagal menyimpan data ke Firestore" });
     } finally {
       setIsSaving(false);
     }
@@ -91,7 +94,7 @@ export default function AdminDashboardPage() {
     if (confirm("Apakah Anda yakin ingin menghapus kosakata ini?")) {
       try {
         await deleteDoc(doc(firestore, "vocabulary", id));
-        toast({ title: "Kosakata dihapus!" });
+        toast({ title: "Kosakata berhasil dihapus!" });
       } catch (error) {
         toast({ variant: "destructive", title: "Gagal menghapus data" });
       }
@@ -115,7 +118,7 @@ export default function AdminDashboardPage() {
       await batch.commit();
       toast({ title: "Berhasil mengimpor data awal!" });
     } catch (error) {
-      toast({ variant: "destructive", title: "Gagal mengimpor data" });
+      toast({ variant: "destructive", title: "Gagal mengimpor data awal" });
     } finally {
       setIsSaving(false);
     }
@@ -128,7 +131,7 @@ export default function AdminDashboardPage() {
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
         <div>
           <h1 className="text-4xl font-headline font-bold mb-2">Dashboard Admin</h1>
-          <p className="text-muted-foreground">Kelola database kosakata secara dinamis.</p>
+          <p className="text-muted-foreground">Kelola database kosakata secara dinamis tanpa mengubah kode.</p>
         </div>
         <div className="flex flex-wrap gap-4">
           <Button variant="outline" onClick={handleSeedData} disabled={isSaving || loading}>
@@ -148,7 +151,7 @@ export default function AdminDashboardPage() {
           <div className="relative flex-1 w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input 
-              placeholder="Cari kata atau kategori..." 
+              placeholder="Cari berdasarkan kata atau kategori..." 
               className="pl-10 bg-white"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -179,7 +182,7 @@ export default function AdminDashboardPage() {
               ) : filteredVocab.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="h-48 text-center text-muted-foreground italic">
-                    Belum ada data. Silakan tambah kosakata atau impor data awal.
+                    Belum ada data. Silakan tambah kosakata atau impor data awal ke Firestore.
                   </TableCell>
                 </TableRow>
               ) : (
@@ -218,7 +221,7 @@ export default function AdminDashboardPage() {
           <DialogHeader>
             <DialogTitle>{editingWord ? "Edit Kosakata" : "Tambah Kosakata Baru"}</DialogTitle>
             <DialogDescription>
-              Perubahan akan langsung muncul di seluruh fitur website.
+              Kosakata baru akan langsung tersedia di fitur Kamus, Penerjemah, dan Game.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -262,10 +265,10 @@ export default function AdminDashboardPage() {
                 id="audio" 
                 value={formData.audioUrl} 
                 onChange={(e) => setFormData({...formData, audioUrl: e.target.value})}
-                placeholder="https://example.com/audio.mp3"
+                placeholder="https://link-ke-file-audio.mp3"
               />
               <p className="text-[10px] text-muted-foreground flex items-center gap-1">
-                <Info className="w-3 h-3" /> Masukkan link file audio .mp3 jika tersedia.
+                <Info className="w-3 h-3" /> Anda bisa mengunggah file ke layanan cloud (seperti Firebase Storage atau Drive) dan memasukkan link-nya di sini.
               </p>
             </div>
           </div>

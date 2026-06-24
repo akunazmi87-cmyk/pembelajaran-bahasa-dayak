@@ -7,7 +7,7 @@ import { Lock, LogIn, AlertCircle, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function AdminLoginPage() {
   const [password, setPassword] = useState("");
@@ -21,6 +21,7 @@ export default function AdminLoginPage() {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
+    // Verifikasi kata sandi sesuai permintaan user
     if (password === "Admin_2") {
       localStorage.setItem("admin_auth", "true");
       router.push("/admin");
