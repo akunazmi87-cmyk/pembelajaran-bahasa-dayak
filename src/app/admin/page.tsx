@@ -3,19 +3,40 @@
 
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Edit2, Trash2, Search, Loader2, Database, Save, LogOut, FileUp, Download, CheckCircle2 } from "lucide-react";
+import { 
+  Plus, 
+  Edit2, 
+  Trash2, 
+  Search, 
+  Loader2, 
+  Database, 
+  Save, 
+  LogOut, 
+  FileUp, 
+  Download, 
+  CheckCircle2,
+  FileSpreadsheet,
+  FileArchive,
+  AlertTriangle,
+  X
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { useCollection, useFirestore } from "@/firebase";
-import { collection, addDoc, updateDoc, deleteDoc, doc, writeBatch } from "firebase/firestore";
+import { useCollection, useFirestore, useStorage } from "@/firebase";
+import { collection, addDoc, updateDoc, deleteDoc, doc, writeBatch, query, where, getDocs } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { INITIAL_VOCABULARY } from "@/lib/data";
+import * as XLSX from "xlsx";
+import JSZip from "jszip";
 
 export default function AdminDashboardPage() {
   const [mounted, setMounted] = useState(false);
@@ -24,11 +45,20 @@ export default function AdminDashboardPage() {
   const [editingWord, setEditingWord] = useState<any>(null);
   const [formData, setFormData] = useState({ indonesian: "", ngaju: "", category: "Umum", audioUrl: "" });
   const [isSaving, setIsSaving] = useState(false);
+  
+  // Impor Massal States
+  const [previewData, setPreviewData] = useState<any[]>([]);
+  const [importProgress, setImportProgress] = useState(0);
+  const [importSummary, setImportSummary] = useState({ total: 0, success: 0, fail: 0 });
+  const [isProcessingFile, setIsProcessingFile] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const zipInputRef = useRef<HTMLInputElement>(null);
   
   const { toast } = useToast();
   const router = useRouter();
   const firestore = useFirestore();
+  const storage = useStorage();
   
   const vocabQuery = useMemo(() => collection(firestore, "vocabulary"), [firestore]);
   const { data: vocabList, loading } = useCollection<any>(vocabQuery);
@@ -102,92 +132,143 @@ export default function AdminDashboardPage() {
     }
   };
 
+  // --- FITUR IMPOR MASSAL ---
+
   const handleFileImport = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    setIsProcessingFile(true);
     const reader = new FileReader();
-    reader.onload = async (e) => {
+    reader.onload = (e) => {
       try {
-        const json = JSON.parse(e.target?.result as string);
-        if (!Array.isArray(json)) {
-          throw new Error("Format file harus berupa array JSON (contoh: [{}, {}])");
-        }
+        const data = e.target?.result;
+        const workbook = XLSX.read(data, { type: 'binary' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const json = XLSX.utils.sheet_to_json(worksheet);
 
-        if (confirm(`Apakah Anda yakin ingin mengimpor ${json.length} kosakata baru?`)) {
-          setIsSaving(true);
-          const batch = writeBatch(firestore);
-          
-          json.forEach((item: any) => {
-            if (item.indonesian && item.ngaju) {
-              const docRef = doc(collection(firestore, "vocabulary"));
-              batch.set(docRef, {
-                indonesian: item.indonesian,
-                ngaju: item.ngaju,
-                category: item.category || "Umum",
-                audioUrl: item.audioUrl || ""
-              });
-            }
-          });
+        const normalizedData = json.map((item: any) => ({
+          indonesian: item.Indonesia || item.indonesian || "",
+          ngaju: item["Dayak Ngaju"] || item.ngaju || "",
+          category: item.Kategori || item.category || "Umum",
+          audio: item.Audio || item.audio || ""
+        })).filter(item => item.indonesian && item.ngaju);
 
-          await batch.commit();
-          toast({ 
-            title: "Berhasil!", 
-            description: `${json.length} kosakata telah ditambahkan ke database.` 
-          });
-        }
+        setPreviewData(normalizedData);
+        setImportSummary({ total: normalizedData.length, success: 0, fail: 0 });
       } catch (error: any) {
-        toast({ 
-          variant: "destructive", 
-          title: "Gagal mengimpor file", 
-          description: error.message || "Pastikan format JSON benar." 
-        });
+        toast({ variant: "destructive", title: "Gagal membaca file", description: "Pastikan format file benar." });
       } finally {
-        setIsSaving(false);
-        if (fileInputRef.current) fileInputRef.current.value = "";
+        setIsProcessingFile(false);
       }
     };
-    reader.readAsText(file);
+    reader.readAsBinaryString(file);
+  };
+
+  const executeBulkImport = async () => {
+    if (previewData.length === 0) return;
+    setIsSaving(true);
+    setImportProgress(0);
+
+    const batchSize = 500;
+    let successCount = 0;
+    let failCount = 0;
+
+    for (let i = 0; i < previewData.length; i += batchSize) {
+      const batch = writeBatch(firestore);
+      const chunk = previewData.slice(i, i + batchSize);
+
+      chunk.forEach(item => {
+        const docRef = doc(collection(firestore, "vocabulary"));
+        batch.set(docRef, {
+          indonesian: item.indonesian,
+          ngaju: item.ngaju,
+          category: item.category,
+          audioUrl: "" // Diisi nanti lewat fitur ZIP audio atau manual
+        });
+      });
+
+      try {
+        await batch.commit();
+        successCount += chunk.length;
+      } catch (err) {
+        failCount += chunk.length;
+      }
+      
+      const progress = Math.round(((i + chunk.length) / previewData.length) * 100);
+      setImportProgress(progress);
+      setImportSummary(prev => ({ ...prev, success: successCount, fail: failCount }));
+    }
+
+    toast({ title: "Impor Selesai!", description: `${successCount} berhasil, ${failCount} gagal.` });
+    setPreviewData([]);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    setIsSaving(false);
+  };
+
+  const handleZipAudioUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsSaving(true);
+    setImportProgress(0);
+
+    try {
+      const zip = new JSZip();
+      const content = await zip.loadAsync(file);
+      const files = Object.keys(content.files).filter(name => !content.files[name].dir && (name.endsWith('.mp3') || name.endsWith('.wav')));
+      
+      let processed = 0;
+      for (const fileName of files) {
+        const audioFile = await content.files[fileName].async("blob");
+        const cleanFileName = fileName.split('/').pop() || fileName;
+        const storageRef = ref(storage, `vocabulary_audio/${cleanFileName}`);
+        
+        // 1. Upload ke Storage
+        await uploadBytes(storageRef, audioFile);
+        const downloadUrl = await getDownloadURL(storageRef);
+
+        // 2. Hubungkan ke Kosakata di Firestore
+        // Kita cari berdasarkan 'ngaju' atau 'indonesian' yang mirip dengan nama file
+        const wordName = cleanFileName.replace(/\.(mp3|wav)$/, "").toLowerCase();
+        
+        const q = query(collection(firestore, "vocabulary"), where("ngaju", "==", wordName));
+        const qSnap = await getDocs(q);
+        
+        const batch = writeBatch(firestore);
+        qSnap.forEach(d => {
+          batch.update(d.ref, { audioUrl: downloadUrl });
+        });
+        await batch.commit();
+
+        processed++;
+        setImportProgress(Math.round((processed / files.length) * 100));
+      }
+
+      toast({ title: "Upload Audio ZIP Selesai", description: `${processed} file audio telah diproses.` });
+    } catch (error) {
+      toast({ variant: "destructive", title: "Gagal memproses ZIP", description: "Pastikan file ZIP valid." });
+    } finally {
+      setIsSaving(false);
+      if (zipInputRef.current) zipInputRef.current.value = "";
+    }
   };
 
   const downloadTemplate = () => {
-    const template = [
-      { indonesian: "Buku", ngaju: "Buku", category: "Benda", audioUrl: "" },
-      { indonesian: "Lari", ngaju: "Hadari", category: "Kegiatan", audioUrl: "" }
+    const data = [
+      { Indonesia: "Kucing", "Dayak Ngaju": "Posi", Kategori: "Hewan", Audio: "posi.mp3" },
+      { Indonesia: "Meja", "Dayak Ngaju": "Meja", Kategori: "Benda", Audio: "meja.mp3" }
     ];
-    const blob = new Blob([JSON.stringify(template, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "template_kosakata_ngaju.json";
-    a.click();
-    URL.revokeObjectURL(url);
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Kosakata");
+    XLSX.writeFile(wb, "template_impor_kosakata.xlsx");
   };
 
   const handleLogout = () => {
     localStorage.removeItem("admin_auth");
     router.push("/");
-  };
-
-  const handleSeedData = async () => {
-    if (!confirm("Impor data awal ke database? (Gunakan jika database kosong)")) return;
-    setIsSaving(true);
-    try {
-      const batch = writeBatch(firestore);
-      INITIAL_VOCABULARY.forEach((word) => {
-        const docRef = doc(collection(firestore, "vocabulary"));
-        batch.set(docRef, {
-          ...word,
-          audioUrl: ""
-        });
-      });
-      await batch.commit();
-      toast({ title: "Berhasil!", description: "Data awal berhasil diimpor." });
-    } catch (error) {
-      toast({ variant: "destructive", title: "Gagal mengimpor data awal" });
-    } finally {
-      setIsSaving(false);
-    }
   };
 
   if (!mounted) return null;
@@ -200,101 +281,189 @@ export default function AdminDashboardPage() {
           <p className="text-muted-foreground">Kelola database kosakata secara dinamis dan efisien.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <input 
-            type="file" 
-            ref={fileInputRef} 
-            className="hidden" 
-            accept=".json" 
-            onChange={handleFileImport} 
-          />
-          <Button variant="outline" size="sm" onClick={downloadTemplate}>
-            <Download className="mr-2 h-4 w-4" /> Template JSON
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={isSaving}>
-            <FileUp className="mr-2 h-4 w-4" /> Impor Massal (JSON)
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleSeedData} disabled={isSaving || loading}>
-            <Database className="mr-2 h-4 w-4" /> Impor Data Awal
-          </Button>
-          <Button size="sm" onClick={() => handleOpenDialog()} className="rounded-full shadow-lg">
-            <Plus className="mr-2 h-4 w-4" /> Tambah Satuan
-          </Button>
-          <Button variant="ghost" size="sm" onClick={handleLogout} className="text-destructive">
-            <LogOut className="mr-2 h-4 w-4" /> Logout
+          <Button variant="ghost" size="sm" onClick={handleLogout} className="text-destructive font-bold">
+            <LogOut className="mr-2 h-4 w-4" /> Logout Admin
           </Button>
         </div>
       </header>
 
-      <Card className="shadow-xl border-none overflow-hidden bg-white">
-        <div className="p-4 border-b bg-muted/30 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="relative flex-1 w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input 
-              placeholder="Cari berdasarkan kata atau kategori..." 
-              className="pl-10 bg-white"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-          <div className="text-sm font-bold text-primary flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4" />
-            Total: {vocabList?.length || 0} Kosakata
-          </div>
-        </div>
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Indonesia</TableHead>
-                <TableHead>Dayak Ngaju</TableHead>
-                <TableHead>Kategori</TableHead>
-                <TableHead>Audio</TableHead>
-                <TableHead className="text-right">Aksi</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="h-48 text-center">
-                    <Loader2 className="animate-spin inline-block h-8 w-8 text-primary" />
-                  </TableCell>
-                </TableRow>
-              ) : filteredVocab.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="h-48 text-center text-muted-foreground italic">
-                    Belum ada data. Gunakan fitur "Impor Massal" untuk memasukkan banyak data sekaligus.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredVocab.map((word) => (
-                  <TableRow key={word.id}>
-                    <TableCell className="font-medium">{word.indonesian}</TableCell>
-                    <TableCell className="font-bold text-primary">{word.ngaju}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{word.category}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      {word.audioUrl ? (
-                        <Badge variant="secondary" className="bg-green-100 text-green-700">Tersedia</Badge>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">Tidak Ada</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right space-x-2">
-                      <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(word)}>
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(word.id)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
+      <Tabs defaultValue="manage" className="space-y-8">
+        <TabsList className="bg-muted p-1 rounded-xl">
+          <TabsTrigger value="manage" className="rounded-lg">Kelola Satuan</TabsTrigger>
+          <TabsTrigger value="import" className="rounded-lg">Impor Massal</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="manage">
+          <Card className="shadow-xl border-none overflow-hidden bg-white">
+            <div className="p-6 border-b bg-muted/30 flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="relative flex-1 w-full">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input 
+                  placeholder="Cari kata atau kategori..." 
+                  className="pl-10 bg-white"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+              <div className="flex items-center gap-4">
+                <Badge variant="outline" className="px-3 py-1 font-bold text-primary">
+                  Total: {vocabList?.length || 0} Kosakata
+                </Badge>
+                <Button onClick={() => handleOpenDialog()} className="rounded-full shadow-lg">
+                  <Plus className="mr-2 h-4 w-4" /> Tambah Kosakata
+                </Button>
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Indonesia</TableHead>
+                    <TableHead>Dayak Ngaju</TableHead>
+                    <TableHead>Kategori</TableHead>
+                    <TableHead>Audio</TableHead>
+                    <TableHead className="text-right">Aksi</TableHead>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </Card>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="h-48 text-center">
+                        <Loader2 className="animate-spin inline-block h-8 w-8 text-primary" />
+                      </TableCell>
+                    </TableRow>
+                  ) : filteredVocab.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="h-48 text-center text-muted-foreground italic">
+                        Belum ada data. Silakan tambah atau gunakan fitur Impor Massal.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredVocab.map((word) => (
+                      <TableRow key={word.id}>
+                        <TableCell className="font-medium">{word.indonesian}</TableCell>
+                        <TableCell className="font-bold text-primary">{word.ngaju}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary" className="text-[10px] uppercase">{word.category}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          {word.audioUrl ? (
+                            <Badge variant="secondary" className="bg-green-100 text-green-700">Ada</Badge>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">Tidak Ada</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right space-x-2">
+                          <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(word)}>
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(word.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="import">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <Card className="shadow-lg border-none">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileSpreadsheet className="w-5 h-5 text-green-600" />
+                  Impor Kosakata (Excel/CSV)
+                </CardTitle>
+                <CardDescription>Unggah file spreadsheet untuk menambahkan banyak kosakata sekaligus.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex flex-col gap-4 p-6 border-2 border-dashed rounded-2xl bg-muted/10 items-center text-center">
+                  <input type="file" ref={fileInputRef} className="hidden" accept=".xlsx,.xls,.csv" onChange={handleFileImport} />
+                  <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSaving}>
+                    Pilih File Excel/CSV
+                  </Button>
+                  <p className="text-xs text-muted-foreground">Format kolom: Indonesia, Dayak Ngaju, Kategori, Audio</p>
+                </div>
+                <Button variant="ghost" className="w-full gap-2 text-primary" onClick={downloadTemplate}>
+                  <Download className="w-4 h-4" /> Download Template Excel
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-lg border-none">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileArchive className="w-5 h-5 text-blue-600" />
+                  Upload Audio Massal (ZIP)
+                </CardTitle>
+                <CardDescription>Unggah file ZIP berisi audio untuk dihubungkan otomatis ke kosakata.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex flex-col gap-4 p-6 border-2 border-dashed rounded-2xl bg-muted/10 items-center text-center">
+                  <input type="file" ref={zipInputRef} className="hidden" accept=".zip" onChange={handleZipAudioUpload} />
+                  <Button variant="outline" onClick={() => zipInputRef.current?.click()} disabled={isSaving}>
+                    Pilih File ZIP Audio
+                  </Button>
+                  <p className="text-xs text-muted-foreground">Sistem akan mencocokkan nama file dengan kosakata Dayak Ngaju.</p>
+                </div>
+                {isSaving && importProgress > 0 && (
+                  <div className="space-y-2">
+                    <Progress value={importProgress} className="h-2" />
+                    <p className="text-xs text-center font-bold text-primary">{importProgress}% Selesai</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {previewData.length > 0 && (
+            <Card className="mt-8 shadow-2xl border-none">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Pratinjau Data Impor</CardTitle>
+                  <CardDescription>Terdapat {previewData.length} baris data siap diimpor.</CardDescription>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="ghost" onClick={() => setPreviewData([])} disabled={isSaving}>
+                    <X className="w-4 h-4 mr-2" /> Batal
+                  </Button>
+                  <Button onClick={executeBulkImport} disabled={isSaving}>
+                    {isSaving ? <Loader2 className="animate-spin mr-2" /> : <CheckCircle2 className="mr-2" />}
+                    Mulai Impor ke Database
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {isSaving && <Progress value={importProgress} className="h-2 mb-4" />}
+                <div className="max-h-[400px] overflow-auto border rounded-lg">
+                  <Table>
+                    <TableHeader className="bg-muted sticky top-0">
+                      <TableRow>
+                        <TableHead>Indonesia</TableHead>
+                        <TableHead>Dayak Ngaju</TableHead>
+                        <TableHead>Kategori</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {previewData.map((row, i) => (
+                        <TableRow key={i}>
+                          <TableCell>{row.indonesian}</TableCell>
+                          <TableCell className="font-bold text-primary">{row.ngaju}</TableCell>
+                          <TableCell>{row.category}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
