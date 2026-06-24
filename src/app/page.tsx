@@ -58,7 +58,7 @@ export default function Home() {
       <section className="text-center mb-16 space-y-6">
         <div className="inline-flex items-center gap-2 bg-primary/5 px-4 py-2 rounded-full text-primary font-bold text-sm mb-4">
           <Sparkles className="w-4 h-4" />
-          Aplikasi Pemandu Lobby Sekolah
+          Aplikasi Pembelajaran Audio Visual Sederhana
         </div>
         <h1 className="text-4xl md:text-7xl font-headline font-bold text-foreground leading-tight">
           Lestarikan Bahasa<br />
@@ -66,7 +66,7 @@ export default function Home() {
         </h1>
         <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto font-medium leading-relaxed">
           Habaring Hurung - Bergotong Royong Melestarikan Budaya.
-          Media belajar interaktif untuk siswa dan pemandu sekolah masa depan.
+          Media belajar interaktif untuk siswa masa depan.
         </p>
         
         <div className="flex justify-center pt-4">
@@ -109,7 +109,7 @@ export default function Home() {
         <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full -mr-32 -mt-32" />
         <div className="space-y-8 relative z-10">
           <h2 className="text-4xl font-headline font-bold">
-            Fitur Pemandu Lobby Pintar
+            Fitur Pembelajaran Audio Visual Sederhana
           </h2>
           <ul className="space-y-4">
             {[
