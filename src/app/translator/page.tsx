@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef } from "react";
 import { 
   Sparkles, 
   Volume2, 
@@ -24,8 +24,7 @@ import { translateDayakNgaju } from "@/ai/flows/dayak-ngaju-translator-flow";
 import { textToSpeech } from "@/ai/flows/text-to-speech-flow";
 import { cn } from "@/lib/utils";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { useCollection, useFirestore } from "@/firebase";
-import { collection } from "firebase/firestore";
+import { INITIAL_VOCABULARY } from "@/lib/data";
 
 export default function TranslatorPage() {
   const [mounted, setMounted] = useState(false);
@@ -33,10 +32,6 @@ export default function TranslatorPage() {
   const [result, setResult] = useState<{ indo: string; ngaju: string; source: 'database' | 'ai' } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-
-  const firestore = useFirestore();
-  const vocabQuery = useMemo(() => collection(firestore, "vocabulary"), [firestore]);
-  const { data: dbVocab } = useCollection<any>(vocabQuery);
 
   // Audio state
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
@@ -55,9 +50,8 @@ export default function TranslatorPage() {
     setAudioState('idle');
 
     try {
-      // 1. Cek di Database lokal Firestore dulu
       const normalizedInput = inputText.toLowerCase().trim();
-      const localMatch = dbVocab.find(v => v.indonesian?.toLowerCase() === normalizedInput);
+      const localMatch = INITIAL_VOCABULARY.find(v => v.indonesian.toLowerCase() === normalizedInput);
       
       if (localMatch) {
         setResult({ 
@@ -66,7 +60,6 @@ export default function TranslatorPage() {
           source: 'database' 
         });
       } else {
-        // 2. Gunakan AI jika tidak ada di DB
         const res = await translateDayakNgaju({ text: inputText, targetLanguage: 'dayak-ngaju' });
         setResult({ 
           indo: inputText, 
@@ -82,21 +75,7 @@ export default function TranslatorPage() {
   };
 
   const handleTTS = async (text: string) => {
-    // Jika data dari DB punya audioUrl, pakai itu
-    const currentWord = dbVocab.find(v => v.ngaju === text);
-    if (currentWord?.audioUrl) {
-      if (audioUrl === currentWord.audioUrl) {
-        audioRef.current?.play();
-        setAudioState('playing');
-        return;
-      }
-      setAudioUrl(currentWord.audioUrl);
-      setAudioState('playing');
-      return;
-    }
-
-    // Jika tidak ada audioUrl di DB, pakai AI TTS
-    if (audioUrl && audioState !== 'idle' && !audioUrl.startsWith('https')) {
+    if (audioUrl && audioState !== 'idle') {
       audioRef.current?.play();
       setAudioState('playing');
       return;
@@ -134,7 +113,7 @@ export default function TranslatorPage() {
       <header className="mb-12 text-center space-y-4">
         <h1 className="text-4xl font-headline font-bold text-primary">Penerjemah Bahasa Dayak Ngaju</h1>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-          Terjemahkan kalimat sehari-hari menggunakan database sekolah dan bantuan AI.
+          Terjemahkan kata atau kalimat sederhana dari Bahasa Indonesia ke Bahasa Dayak Ngaju.
         </p>
       </header>
 
@@ -171,9 +150,9 @@ export default function TranslatorPage() {
             {result.source === 'ai' && (
               <Alert variant="destructive" className="bg-orange-50 border-orange-200 text-orange-800">
                 <AlertCircle className="h-4 w-4 text-orange-600" />
-                <AlertTitle className="font-bold">Kosakata belum tersedia dalam database sekolah.</AlertTitle>
+                <AlertTitle className="font-bold">Kosakata belum tersedia dalam database.</AlertTitle>
                 <AlertDescription className="text-sm">
-                  Hasil di bawah ini dihasilkan oleh AI Gemini dan mungkin memerlukan verifikasi guru atau penutur asli.
+                  Hasil di bawah ini dihasilkan oleh AI dan mungkin memerlukan verifikasi guru atau penutur asli.
                 </AlertDescription>
               </Alert>
             )}

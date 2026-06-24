@@ -21,7 +21,7 @@ export default function Home() {
   const modules = [
     {
       title: "Penerjemah Pintar",
-      description: "Terjemahkan kalimat dengan bantuan AI dan database sekolah secara akurat.",
+      description: "Terjemahkan kalimat dengan bantuan AI dan database lokal secara akurat.",
       icon: Languages,
       href: "/translator",
       color: "bg-primary/10 text-primary",
@@ -45,7 +45,7 @@ export default function Home() {
     },
     {
       title: "Ruang Percakapan",
-      description: "Latih kemampuan bicara dengan simulasi dialog sehari-hari di sekolah.",
+      description: "Latih kemampuan bicara dengan simulasi dialog sehari-hari.",
       icon: MessageSquare,
       href: "/conversation",
       color: "bg-primary/10 text-primary",
@@ -66,7 +66,7 @@ export default function Home() {
         </h1>
         <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto font-medium leading-relaxed">
           Habaring Hurung - Bergotong Royong Melestarikan Budaya.
-          Media belajar interaktif untuk siswa masa depan.
+          Media belajar interaktif untuk masa depan.
         </p>
         
         <div className="flex justify-center pt-4">
@@ -113,11 +113,11 @@ export default function Home() {
           </h2>
           <ul className="space-y-4">
             {[
-              "Database terjemahan sapaan tamu sekolah yang akurat.",
+              "Database terjemahan sapaan yang akurat.",
               "Dukungan AI untuk menerjemahkan kalimat kompleks.",
               "Mini game edukasi untuk menghafal kosakata.",
               "Audio pelafalan asli (TTS) untuk belajar intonasi.",
-              "Pencatatan riwayat belajar siswa secara otomatis di Firestore."
+              "Latihan soal dan tantangan interaktif."
             ].map((text, i) => (
               <li key={i} className="flex items-start gap-4 text-muted-foreground font-medium text-lg">
                 <div className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center flex-shrink-0 mt-0.5 font-bold">

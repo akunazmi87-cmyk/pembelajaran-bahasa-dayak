@@ -16,8 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription }
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { useCollection, useFirestore } from "@/firebase";
-import { collection } from "firebase/firestore";
+import { INITIAL_VOCABULARY } from "@/lib/data";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -47,11 +46,6 @@ export default function WordGamePage() {
   const { toast } = useToast();
   const router = useRouter();
 
-  // Firestore Data
-  const firestore = useFirestore();
-  const vocabQuery = useMemo(() => collection(firestore, "vocabulary"), [firestore]);
-  const { data: dbVocab, loading: dbLoading } = useCollection<any>(vocabQuery);
-
   // Game State
   const [currentWord, setCurrentWord] = useState<any>(null);
   const [scrambled, setScrambled] = useState<string[]>([]);
@@ -79,21 +73,20 @@ export default function WordGamePage() {
   };
 
   const nextLevel = useCallback(() => {
-    if (dbVocab.length === 0) return;
-    const randomIndex = Math.floor(Math.random() * dbVocab.length);
-    const wordObj = dbVocab[randomIndex];
+    const randomIndex = Math.floor(Math.random() * INITIAL_VOCABULARY.length);
+    const wordObj = INITIAL_VOCABULARY[randomIndex];
     
     setCurrentWord(wordObj);
     setScrambled(scrambleWord(wordObj.ngaju));
     setUserInput([]);
     setIsCorrect(null);
-  }, [dbVocab]);
+  }, []);
 
   useEffect(() => {
-    if (mounted && !currentWord && dbVocab.length > 0) {
+    if (mounted && !currentWord) {
       nextLevel();
     }
-  }, [mounted, currentWord, nextLevel, dbVocab]);
+  }, [mounted, currentWord, nextLevel]);
 
   const handleLetterClick = (letter: string, index: number) => {
     if (isCorrect !== null) return;
@@ -160,15 +153,6 @@ export default function WordGamePage() {
   };
 
   if (!mounted) return null;
-
-  if (dbLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <Loader2 className="w-10 h-10 animate-spin text-primary" />
-        <p className="text-muted-foreground font-medium">Memuat database game...</p>
-      </div>
-    );
-  }
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
