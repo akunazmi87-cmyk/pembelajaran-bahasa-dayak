@@ -18,7 +18,8 @@ import {
   FileSpreadsheet,
   FileArchive,
   AlertTriangle,
-  X
+  X,
+  Info
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,9 +33,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { useCollection, useFirestore, useStorage } from "@/firebase";
-import { collection, addDoc, updateDoc, deleteDoc, doc, writeBatch, query, where, getDocs } from "firebase/firestore";
+import { collection, addDoc, updateDoc, deleteDoc, doc, writeBatch, query, where, getDocs, limit } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { INITIAL_VOCABULARY } from "@/lib/data";
 import * as XLSX from "xlsx";
 import JSZip from "jszip";
 
@@ -149,10 +149,9 @@ export default function AdminDashboardPage() {
         const json = XLSX.utils.sheet_to_json(worksheet);
 
         const normalizedData = json.map((item: any) => ({
-          indonesian: item.Indonesia || item.indonesian || "",
-          ngaju: item["Dayak Ngaju"] || item.ngaju || "",
+          indonesian: item.Indonesia || item.indonesian || item.indonesia || "",
+          ngaju: item["Dayak Ngaju"] || item.ngaju || item.dayak || "",
           category: item.Kategori || item.category || "Umum",
-          audio: item.Audio || item.audio || ""
         })).filter(item => item.indonesian && item.ngaju);
 
         setPreviewData(normalizedData);
@@ -185,7 +184,7 @@ export default function AdminDashboardPage() {
           indonesian: item.indonesian,
           ngaju: item.ngaju,
           category: item.category,
-          audioUrl: "" // Diisi nanti lewat fitur ZIP audio atau manual
+          audioUrl: ""
         });
       });
 
@@ -219,7 +218,17 @@ export default function AdminDashboardPage() {
       const content = await zip.loadAsync(file);
       const files = Object.keys(content.files).filter(name => !content.files[name].dir && (name.endsWith('.mp3') || name.endsWith('.wav')));
       
+      if (files.length === 0) {
+        toast({ variant: "destructive", title: "ZIP Kosong", description: "Tidak ditemukan file audio (.mp3/.wav)" });
+        setIsSaving(false);
+        return;
+      }
+
       let processed = 0;
+      const batchSize = 100; // Batch komit firestore
+      let currentBatch = writeBatch(firestore);
+      let batchCount = 0;
+
       for (const fileName of files) {
         const audioFile = await content.files[fileName].async("blob");
         const cleanFileName = fileName.split('/').pop() || fileName;
@@ -229,26 +238,36 @@ export default function AdminDashboardPage() {
         await uploadBytes(storageRef, audioFile);
         const downloadUrl = await getDownloadURL(storageRef);
 
-        // 2. Hubungkan ke Kosakata di Firestore
-        // Kita cari berdasarkan 'ngaju' atau 'indonesian' yang mirip dengan nama file
+        // 2. Hubungkan ke Kosakata
         const wordName = cleanFileName.replace(/\.(mp3|wav)$/, "").toLowerCase();
         
-        const q = query(collection(firestore, "vocabulary"), where("ngaju", "==", wordName));
+        const q = query(collection(firestore, "vocabulary"), where("ngaju", "==", wordName), limit(5));
         const qSnap = await getDocs(q);
         
-        const batch = writeBatch(firestore);
         qSnap.forEach(d => {
-          batch.update(d.ref, { audioUrl: downloadUrl });
+          currentBatch.update(d.ref, { audioUrl: downloadUrl });
+          batchCount++;
         });
-        await batch.commit();
+
+        // Commit batch jika sudah mencapai batas atau di akhir loop
+        if (batchCount >= 400) {
+          await currentBatch.commit();
+          currentBatch = writeBatch(firestore);
+          batchCount = 0;
+        }
 
         processed++;
         setImportProgress(Math.round((processed / files.length) * 100));
       }
 
+      if (batchCount > 0) {
+        await currentBatch.commit();
+      }
+
       toast({ title: "Upload Audio ZIP Selesai", description: `${processed} file audio telah diproses.` });
     } catch (error) {
-      toast({ variant: "destructive", title: "Gagal memproses ZIP", description: "Pastikan file ZIP valid." });
+      console.error(error);
+      toast({ variant: "destructive", title: "Gagal memproses ZIP", description: "Pastikan file ZIP valid dan koneksi stabil." });
     } finally {
       setIsSaving(false);
       if (zipInputRef.current) zipInputRef.current.value = "";
@@ -257,8 +276,8 @@ export default function AdminDashboardPage() {
 
   const downloadTemplate = () => {
     const data = [
-      { Indonesia: "Kucing", "Dayak Ngaju": "Posi", Kategori: "Hewan", Audio: "posi.mp3" },
-      { Indonesia: "Meja", "Dayak Ngaju": "Meja", Kategori: "Benda", Audio: "meja.mp3" }
+      { Indonesia: "Makan", "Dayak Ngaju": "Kuman", Kategori: "Kegiatan" },
+      { Indonesia: "Ular", "Dayak Ngaju": "Handipe", Kategori: "Hewan" }
     ];
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
@@ -314,9 +333,9 @@ export default function AdminDashboardPage() {
                 </Button>
               </div>
             </div>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto max-h-[600px]">
               <Table>
-                <TableHeader>
+                <TableHeader className="bg-white sticky top-0 z-10 shadow-sm">
                   <TableRow>
                     <TableHead>Indonesia</TableHead>
                     <TableHead>Dayak Ngaju</TableHead>
@@ -386,7 +405,7 @@ export default function AdminDashboardPage() {
                   <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSaving}>
                     Pilih File Excel/CSV
                   </Button>
-                  <p className="text-xs text-muted-foreground">Format kolom: Indonesia, Dayak Ngaju, Kategori, Audio</p>
+                  <p className="text-xs text-muted-foreground">Sistem mendukung ribuan baris data.</p>
                 </div>
                 <Button variant="ghost" className="w-full gap-2 text-primary" onClick={downloadTemplate}>
                   <Download className="w-4 h-4" /> Download Template Excel
@@ -408,12 +427,12 @@ export default function AdminDashboardPage() {
                   <Button variant="outline" onClick={() => zipInputRef.current?.click()} disabled={isSaving}>
                     Pilih File ZIP Audio
                   </Button>
-                  <p className="text-xs text-muted-foreground">Sistem akan mencocokkan nama file dengan kosakata Dayak Ngaju.</p>
+                  <p className="text-xs text-muted-foreground">Nama file audio harus sama dengan teks Dayak Ngaju.</p>
                 </div>
                 {isSaving && importProgress > 0 && (
                   <div className="space-y-2">
                     <Progress value={importProgress} className="h-2" />
-                    <p className="text-xs text-center font-bold text-primary">{importProgress}% Selesai</p>
+                    <p className="text-xs text-center font-bold text-primary">Proses: {importProgress}%</p>
                   </div>
                 )}
               </CardContent>
@@ -422,18 +441,18 @@ export default function AdminDashboardPage() {
 
           {previewData.length > 0 && (
             <Card className="mt-8 shadow-2xl border-none">
-              <CardHeader className="flex flex-row items-center justify-between">
+              <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div>
                   <CardTitle>Pratinjau Data Impor</CardTitle>
-                  <CardDescription>Terdapat {previewData.length} baris data siap diimpor.</CardDescription>
+                  <CardDescription>Ditemukan {previewData.length} baris data (Menampilkan 100 baris pertama untuk performa).</CardDescription>
                 </div>
-                <div className="flex gap-2">
-                  <Button variant="ghost" onClick={() => setPreviewData([])} disabled={isSaving}>
+                <div className="flex gap-2 w-full md:w-auto">
+                  <Button variant="ghost" onClick={() => setPreviewData([])} disabled={isSaving} className="flex-1 md:flex-none">
                     <X className="w-4 h-4 mr-2" /> Batal
                   </Button>
-                  <Button onClick={executeBulkImport} disabled={isSaving}>
+                  <Button onClick={executeBulkImport} disabled={isSaving} className="flex-1 md:flex-none">
                     {isSaving ? <Loader2 className="animate-spin mr-2" /> : <CheckCircle2 className="mr-2" />}
-                    Mulai Impor ke Database
+                    Impor Sekarang
                   </Button>
                 </div>
               </CardHeader>
@@ -441,7 +460,7 @@ export default function AdminDashboardPage() {
                 {isSaving && <Progress value={importProgress} className="h-2 mb-4" />}
                 <div className="max-h-[400px] overflow-auto border rounded-lg">
                   <Table>
-                    <TableHeader className="bg-muted sticky top-0">
+                    <TableHeader className="bg-muted sticky top-0 z-10">
                       <TableRow>
                         <TableHead>Indonesia</TableHead>
                         <TableHead>Dayak Ngaju</TableHead>
@@ -449,7 +468,7 @@ export default function AdminDashboardPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {previewData.map((row, i) => (
+                      {previewData.slice(0, 100).map((row, i) => (
                         <TableRow key={i}>
                           <TableCell>{row.indonesian}</TableCell>
                           <TableCell className="font-bold text-primary">{row.ngaju}</TableCell>
@@ -459,6 +478,12 @@ export default function AdminDashboardPage() {
                     </TableBody>
                   </Table>
                 </div>
+                {previewData.length > 100 && (
+                  <div className="mt-4 flex items-center gap-2 p-3 bg-blue-50 text-blue-700 rounded-lg text-sm">
+                    <Info className="w-4 h-4" />
+                    Data lainnya disembunyikan dari pratinjau untuk mempercepat performa browser.
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}
