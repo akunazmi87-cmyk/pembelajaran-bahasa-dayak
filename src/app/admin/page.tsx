@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Edit2, Trash2, Search, Loader2, Database, Save, LogOut, Info, FileUp, Download } from "lucide-react";
+import { Plus, Edit2, Trash2, Search, Loader2, Database, Save, LogOut, FileUp, Download, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -111,7 +111,7 @@ export default function AdminDashboardPage() {
       try {
         const json = JSON.parse(e.target?.result as string);
         if (!Array.isArray(json)) {
-          throw new Error("Format file harus berupa array JSON");
+          throw new Error("Format file harus berupa array JSON (contoh: [{}, {}])");
         }
 
         if (confirm(`Apakah Anda yakin ingin mengimpor ${json.length} kosakata baru?`)) {
@@ -131,7 +131,10 @@ export default function AdminDashboardPage() {
           });
 
           await batch.commit();
-          toast({ title: `Berhasil mengimpor ${json.length} kosakata!` });
+          toast({ 
+            title: "Berhasil!", 
+            description: `${json.length} kosakata telah ditambahkan ke database.` 
+          });
         }
       } catch (error: any) {
         toast({ 
@@ -149,13 +152,14 @@ export default function AdminDashboardPage() {
 
   const downloadTemplate = () => {
     const template = [
-      { indonesian: "Contoh", ngaju: "Contoh", category: "Umum", audioUrl: "" }
+      { indonesian: "Buku", ngaju: "Buku", category: "Benda", audioUrl: "" },
+      { indonesian: "Lari", ngaju: "Hadari", category: "Kegiatan", audioUrl: "" }
     ];
     const blob = new Blob([JSON.stringify(template, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "template_kosakata.json";
+    a.download = "template_kosakata_ngaju.json";
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -166,7 +170,7 @@ export default function AdminDashboardPage() {
   };
 
   const handleSeedData = async () => {
-    if (!confirm("Impor 31 kosakata awal ke database? (Gunakan jika database kosong)")) return;
+    if (!confirm("Impor data awal ke database? (Gunakan jika database kosong)")) return;
     setIsSaving(true);
     try {
       const batch = writeBatch(firestore);
@@ -178,7 +182,7 @@ export default function AdminDashboardPage() {
         });
       });
       await batch.commit();
-      toast({ title: "Berhasil mengimpor data awal!" });
+      toast({ title: "Berhasil!", description: "Data awal berhasil diimpor." });
     } catch (error) {
       toast({ variant: "destructive", title: "Gagal mengimpor data awal" });
     } finally {
@@ -189,7 +193,7 @@ export default function AdminDashboardPage() {
   if (!mounted) return null;
 
   return (
-    <div className="container mx-auto px-4 py-12 max-w-6xl">
+    <div className="container mx-auto px-4 py-12 max-w-6xl" suppressHydrationWarning>
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
         <div>
           <h1 className="text-4xl font-headline font-bold mb-2">Dashboard Admin</h1>
@@ -204,16 +208,16 @@ export default function AdminDashboardPage() {
             onChange={handleFileImport} 
           />
           <Button variant="outline" size="sm" onClick={downloadTemplate}>
-            <Download className="mr-2 h-4 w-4" /> Template
+            <Download className="mr-2 h-4 w-4" /> Template JSON
           </Button>
           <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={isSaving}>
-            <FileUp className="mr-2 h-4 w-4" /> Impor JSON
+            <FileUp className="mr-2 h-4 w-4" /> Impor Massal (JSON)
           </Button>
           <Button variant="outline" size="sm" onClick={handleSeedData} disabled={isSaving || loading}>
-            <Database className="mr-2 h-4 w-4" /> Data Awal
+            <Database className="mr-2 h-4 w-4" /> Impor Data Awal
           </Button>
           <Button size="sm" onClick={() => handleOpenDialog()} className="rounded-full shadow-lg">
-            <Plus className="mr-2 h-4 w-4" /> Tambah
+            <Plus className="mr-2 h-4 w-4" /> Tambah Satuan
           </Button>
           <Button variant="ghost" size="sm" onClick={handleLogout} className="text-destructive">
             <LogOut className="mr-2 h-4 w-4" /> Logout
@@ -232,8 +236,9 @@ export default function AdminDashboardPage() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <div className="text-sm font-bold text-primary">
-            Total: {vocabList?.length || 0} Kata
+          <div className="text-sm font-bold text-primary flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4" />
+            Total: {vocabList?.length || 0} Kosakata
           </div>
         </div>
         <div className="overflow-x-auto">
@@ -257,7 +262,7 @@ export default function AdminDashboardPage() {
               ) : filteredVocab.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="h-48 text-center text-muted-foreground italic">
-                    Belum ada data. Silakan tambah kosakata atau gunakan fitur impor.
+                    Belum ada data. Gunakan fitur "Impor Massal" untuk memasukkan banyak data sekaligus.
                   </TableCell>
                 </TableRow>
               ) : (
@@ -296,7 +301,7 @@ export default function AdminDashboardPage() {
           <DialogHeader>
             <DialogTitle>{editingWord ? "Edit Kosakata" : "Tambah Kosakata Baru"}</DialogTitle>
             <DialogDescription>
-              Data akan langsung diperbarui di seluruh fitur pembelajaran.
+              Isi data di bawah ini untuk memperbarui database secara real-time.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -340,7 +345,7 @@ export default function AdminDashboardPage() {
                 id="audio" 
                 value={formData.audioUrl} 
                 onChange={(e) => setFormData({...formData, audioUrl: e.target.value})}
-                placeholder="https://link-ke-file-audio.mp3"
+                placeholder="https://example.com/audio.mp3"
               />
             </div>
           </div>
