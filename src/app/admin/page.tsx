@@ -2,7 +2,8 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { Plus, Edit2, Trash2, Search, Loader2, Database, Save, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Plus, Edit2, Trash2, Search, Loader2, Database, Save, LogOut, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -16,28 +17,35 @@ import { useCollection, useFirestore } from "@/firebase";
 import { collection, addDoc, updateDoc, deleteDoc, doc, writeBatch } from "firebase/firestore";
 import { INITIAL_VOCABULARY } from "@/lib/data";
 
-export default function AdminPage() {
+export default function AdminDashboardPage() {
   const [mounted, setMounted] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingWord, setEditingWord] = useState<any>(null);
-  const [formData, setFormData] = useState({ indonesian: "", ngaju: "", category: "Umum" });
+  const [formData, setFormData] = useState({ indonesian: "", ngaju: "", category: "Umum", audioUrl: "" });
   const [isSaving, setIsSaving] = useState(false);
   
   const { toast } = useToast();
+  const router = useRouter();
   const firestore = useFirestore();
+  
   const vocabQuery = useMemo(() => collection(firestore, "vocabulary"), [firestore]);
   const { data: vocabList, loading } = useCollection<any>(vocabQuery);
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
+    const isAuth = localStorage.getItem("admin_auth");
+    if (!isAuth) {
+      router.push("/admin/login");
+    } else {
+      setMounted(true);
+    }
+  }, [router]);
 
   const filteredVocab = useMemo(() => {
     return vocabList.filter(v => 
-      v.ngaju.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      v.indonesian.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      v.category.toLowerCase().includes(searchQuery.toLowerCase())
+      v.ngaju?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      v.indonesian?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      v.category?.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [vocabList, searchQuery]);
 
@@ -46,10 +54,15 @@ export default function AdminPage() {
   const handleOpenDialog = (word?: any) => {
     if (word) {
       setEditingWord(word);
-      setFormData({ indonesian: word.indonesian, ngaju: word.ngaju, category: word.category });
+      setFormData({ 
+        indonesian: word.indonesian, 
+        ngaju: word.ngaju, 
+        category: word.category || "Umum",
+        audioUrl: word.audioUrl || "" 
+      });
     } else {
       setEditingWord(null);
-      setFormData({ indonesian: "", ngaju: "", category: "Umum" });
+      setFormData({ indonesian: "", ngaju: "", category: "Umum", audioUrl: "" });
     }
     setIsDialogOpen(true);
   };
@@ -84,8 +97,13 @@ export default function AdminPage() {
     }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem("admin_auth");
+    router.push("/");
+  };
+
   const handleSeedData = async () => {
-    if (!confirm("Impor data awal? Ini akan menambahkan kosakata bawaan.")) return;
+    if (!confirm("Impor data awal dari sistem?")) return;
     setIsSaving(true);
     try {
       const batch = writeBatch(firestore);
@@ -102,30 +120,24 @@ export default function AdminPage() {
     }
   };
 
-  if (!mounted) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <Loader2 className="w-10 h-10 animate-spin text-primary" />
-        <p className="text-muted-foreground font-medium">Memuat manajemen data...</p>
-      </div>
-    );
-  }
+  if (!mounted) return null;
 
   return (
     <div className="container mx-auto px-4 py-12 max-w-6xl">
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
         <div>
-          <h1 className="text-4xl font-headline font-bold mb-2">Manajemen Kosakata</h1>
-          <p className="text-muted-foreground">Kelola basis data kosakata untuk seluruh fitur aplikasi.</p>
+          <h1 className="text-4xl font-headline font-bold mb-2">Dashboard Admin</h1>
+          <p className="text-muted-foreground">Kelola database kosakata dan audio pembelajaran.</p>
         </div>
         <div className="flex gap-4">
-          {vocabList.length === 0 && (
-            <Button variant="outline" onClick={handleSeedData} disabled={isSaving}>
-              <Database className="mr-2 h-4 w-4" /> Impor Data Awal
-            </Button>
-          )}
+          <Button variant="outline" onClick={handleSeedData} disabled={isSaving}>
+            <Database className="mr-2 h-4 w-4" /> Impor Data Awal
+          </Button>
           <Button onClick={() => handleOpenDialog()} className="rounded-full shadow-lg">
             <Plus className="mr-2 h-4 w-4" /> Tambah Kosakata
+          </Button>
+          <Button variant="ghost" onClick={handleLogout} className="text-destructive">
+            <LogOut className="mr-2 h-4 w-4" /> Logout
           </Button>
         </div>
       </header>
@@ -135,7 +147,7 @@ export default function AdminPage() {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input 
-              placeholder="Cari berdasarkan kata atau kategori..." 
+              placeholder="Cari kata atau kategori..." 
               className="pl-10 bg-white"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -145,36 +157,44 @@ export default function AdminPage() {
             Total: {vocabList.length} Kata
           </div>
         </div>
-        <CardContent className="p-0">
+        <CardContent className="p-0 overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Indonesia</TableHead>
                 <TableHead>Dayak Ngaju</TableHead>
-                <TableHead>Bahasa Indonesia</TableHead>
                 <TableHead>Kategori</TableHead>
+                <TableHead>Audio</TableHead>
                 <TableHead className="text-right">Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="h-48 text-center">
+                  <TableCell colSpan={5} className="h-48 text-center">
                     <Loader2 className="animate-spin inline-block h-8 w-8 text-primary" />
                   </TableCell>
                 </TableRow>
               ) : filteredVocab.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="h-48 text-center text-muted-foreground italic">
-                    Belum ada data. Silakan tambah kosakata baru.
+                  <TableCell colSpan={5} className="h-48 text-center text-muted-foreground italic">
+                    Belum ada data. Silakan tambah kosakata atau impor data awal.
                   </TableCell>
                 </TableRow>
               ) : (
                 filteredVocab.map((word) => (
                   <TableRow key={word.id}>
+                    <TableCell className="font-medium">{word.indonesian}</TableCell>
                     <TableCell className="font-bold text-primary">{word.ngaju}</TableCell>
-                    <TableCell>{word.indonesian}</TableCell>
                     <TableCell>
                       <Badge variant="outline">{word.category}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      {word.audioUrl ? (
+                        <Badge variant="secondary" className="bg-green-100 text-green-700">Tersedia</Badge>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Tidak Ada</span>
+                      )}
                     </TableCell>
                     <TableCell className="text-right space-x-2">
                       <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(word)}>
@@ -197,26 +217,26 @@ export default function AdminPage() {
           <DialogHeader>
             <DialogTitle>{editingWord ? "Edit Kosakata" : "Tambah Kosakata Baru"}</DialogTitle>
             <DialogDescription>
-              Isi formulir di bawah ini untuk mengelola basis data kosakata.
+              Isi data di bawah ini. Perubahan akan langsung muncul di seluruh fitur website.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="ngaju">Bahasa Dayak Ngaju</Label>
-              <Input 
-                id="ngaju" 
-                value={formData.ngaju} 
-                onChange={(e) => setFormData({...formData, ngaju: e.target.value})}
-                placeholder="Contoh: handipe"
-              />
-            </div>
             <div className="grid gap-2">
               <Label htmlFor="indonesian">Bahasa Indonesia</Label>
               <Input 
                 id="indonesian" 
                 value={formData.indonesian} 
                 onChange={(e) => setFormData({...formData, indonesian: e.target.value})}
-                placeholder="Contoh: Ular"
+                placeholder="Contoh: Makan"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="ngaju">Bahasa Dayak Ngaju</Label>
+              <Input 
+                id="ngaju" 
+                value={formData.ngaju} 
+                onChange={(e) => setFormData({...formData, ngaju: e.target.value})}
+                placeholder="Contoh: Kuman"
               />
             </div>
             <div className="grid gap-2">
@@ -225,7 +245,7 @@ export default function AdminPage() {
                 value={formData.category} 
                 onValueChange={(v) => setFormData({...formData, category: v})}
               >
-                <SelectTrigger id="category">
+                <SelectTrigger>
                   <SelectValue placeholder="Pilih Kategori" />
                 </SelectTrigger>
                 <SelectContent>
@@ -235,6 +255,18 @@ export default function AdminPage() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="grid gap-2">
+              <Label htmlFor="audio">URL Audio (Opsional)</Label>
+              <Input 
+                id="audio" 
+                value={formData.audioUrl} 
+                onChange={(e) => setFormData({...formData, audioUrl: e.target.value})}
+                placeholder="https://example.com/audio.mp3"
+              />
+              <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                <Info className="w-3 h-3" /> Gunakan URL audio .mp3 atau .wav jika tersedia.
+              </p>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={isSaving}>
@@ -242,7 +274,7 @@ export default function AdminPage() {
             </Button>
             <Button onClick={handleSave} disabled={isSaving}>
               {isSaving ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Save className="mr-2 h-4 w-4" />}
-              Simpan
+              Simpan Data
             </Button>
           </DialogFooter>
         </DialogContent>

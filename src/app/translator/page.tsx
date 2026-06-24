@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { 
   Sparkles, 
   Volume2, 
@@ -24,6 +24,8 @@ import { translateDayakNgaju } from "@/ai/flows/dayak-ngaju-translator-flow";
 import { textToSpeech } from "@/ai/flows/text-to-speech-flow";
 import { cn } from "@/lib/utils";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useCollection, useFirestore } from "@/firebase";
+import { collection } from "firebase/firestore";
 
 export default function TranslatorPage() {
   const [mounted, setMounted] = useState(false);
@@ -31,6 +33,10 @@ export default function TranslatorPage() {
   const [result, setResult] = useState<{ indo: string; ngaju: string; source: 'database' | 'ai' } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+
+  const firestore = useFirestore();
+  const vocabQuery = useMemo(() => collection(firestore, "vocabulary"), [firestore]);
+  const { data: dbVocab } = useCollection<any>(vocabQuery);
 
   // Audio state
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
@@ -49,12 +55,25 @@ export default function TranslatorPage() {
     setAudioState('idle');
 
     try {
-      const res = await translateDayakNgaju({ text: inputText, targetLanguage: 'dayak-ngaju' });
-      setResult({ 
-        indo: inputText, 
-        ngaju: res.translatedText, 
-        source: res.source as 'database' | 'ai' 
-      });
+      // 1. Cek di Database lokal Firestore dulu
+      const normalizedInput = inputText.toLowerCase().trim();
+      const localMatch = dbVocab.find(v => v.indonesian?.toLowerCase() === normalizedInput);
+      
+      if (localMatch) {
+        setResult({ 
+          indo: inputText, 
+          ngaju: localMatch.ngaju, 
+          source: 'database' 
+        });
+      } else {
+        // 2. Gunakan AI jika tidak ada di DB
+        const res = await translateDayakNgaju({ text: inputText, targetLanguage: 'dayak-ngaju' });
+        setResult({ 
+          indo: inputText, 
+          ngaju: res.translatedText, 
+          source: res.source as 'database' | 'ai' 
+        });
+      }
     } catch (error) {
       toast({ variant: "destructive", title: "Gagal menerjemahkan" });
     } finally {
@@ -63,7 +82,21 @@ export default function TranslatorPage() {
   };
 
   const handleTTS = async (text: string) => {
-    if (audioUrl && audioState !== 'idle') {
+    // Jika data dari DB punya audioUrl, pakai itu
+    const currentWord = dbVocab.find(v => v.ngaju === text);
+    if (currentWord?.audioUrl) {
+      if (audioUrl === currentWord.audioUrl) {
+        audioRef.current?.play();
+        setAudioState('playing');
+        return;
+      }
+      setAudioUrl(currentWord.audioUrl);
+      setAudioState('playing');
+      return;
+    }
+
+    // Jika tidak ada audioUrl di DB, pakai AI TTS
+    if (audioUrl && audioState !== 'idle' && !audioUrl.startsWith('https')) {
       audioRef.current?.play();
       setAudioState('playing');
       return;
@@ -94,20 +127,14 @@ export default function TranslatorPage() {
     toast({ title: "Berhasil disalin ke papan klip!" });
   };
 
-  if (!mounted) {
-    return (
-      <div className="flex justify-center items-center min-h-[60vh]">
-        <Loader2 className="animate-spin text-primary h-8 w-8" />
-      </div>
-    );
-  }
+  if (!mounted) return null;
 
   return (
     <div className="container mx-auto px-4 py-12 max-w-4xl">
       <header className="mb-12 text-center space-y-4">
         <h1 className="text-4xl font-headline font-bold text-primary">Penerjemah Bahasa Dayak Ngaju</h1>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-          Terjemahkan kalimat sehari-hari dari Bahasa Indonesia ke Bahasa Dayak Ngaju.
+          Terjemahkan kalimat sehari-hari menggunakan database sekolah dan bantuan AI.
         </p>
       </header>
 
@@ -144,9 +171,9 @@ export default function TranslatorPage() {
             {result.source === 'ai' && (
               <Alert variant="destructive" className="bg-orange-50 border-orange-200 text-orange-800">
                 <AlertCircle className="h-4 w-4 text-orange-600" />
-                <AlertTitle className="font-bold">Kosakata belum tersedia dalam database.</AlertTitle>
+                <AlertTitle className="font-bold">Kosakata belum tersedia dalam database sekolah.</AlertTitle>
                 <AlertDescription className="text-sm">
-                  Hasil di bawah ini dihasilkan oleh AI dan mungkin memerlukan verifikasi lebih lanjut.
+                  Hasil di bawah ini dihasilkan oleh AI Gemini dan mungkin memerlukan verifikasi guru atau penutur asli.
                 </AlertDescription>
               </Alert>
             )}

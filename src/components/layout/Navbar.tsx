@@ -4,7 +4,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Book, MessageSquare, Trophy, Home, Languages, Gamepad2 } from "lucide-react";
+import { Book, MessageSquare, Trophy, Home, Languages, Gamepad2, Settings } from "lucide-react";
 
 const navItems = [
   { name: "Beranda", href: "/", icon: Home },
@@ -44,6 +44,16 @@ export function Navbar() {
               {item.name}
             </Link>
           ))}
+          <Link
+            href="/admin/login"
+            className={cn(
+              "flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary border-l pl-6 ml-2",
+              pathname.startsWith("/admin") ? "text-primary" : "text-muted-foreground"
+            )}
+          >
+            <Settings className="w-4 h-4" />
+            Admin
+          </Link>
         </div>
 
         <div className="md:hidden flex items-center gap-2 fixed bottom-0 left-0 right-0 bg-background border-t p-2 justify-around shadow-lg z-50 overflow-x-auto no-scrollbar">
@@ -60,6 +70,16 @@ export function Navbar() {
               {item.name}
             </Link>
           ))}
+          <Link
+            href="/admin/login"
+            className={cn(
+              "flex flex-col items-center gap-1 text-[10px] font-medium transition-colors min-w-[55px]",
+              pathname.startsWith("/admin") ? "text-primary" : "text-muted-foreground"
+            )}
+          >
+            <Settings className="w-5 h-5" />
+            Admin
+          </Link>
         </div>
       </div>
     </nav>

@@ -4,10 +4,8 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { 
   Trophy, 
-  Lightbulb, 
   RotateCcw, 
   ArrowRight, 
-  Star, 
   Loader2,
   CheckCircle2,
   Zap,
@@ -16,14 +14,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { INITIAL_VOCABULARY } from "@/lib/data";
+import { useCollection, useFirestore } from "@/firebase";
+import { collection } from "firebase/firestore";
 import { 
   AlertDialog,
   AlertDialogAction,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -32,7 +29,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useRouter } from "next/navigation";
 
-// Game Constants (Local)
+// Game Constants
 const LEVELS = [
   { min: 0, label: "Pemula" },
   { min: 10, label: "Amatir" },
@@ -50,16 +47,19 @@ export default function WordGamePage() {
   const { toast } = useToast();
   const router = useRouter();
 
+  // Firestore Data
+  const firestore = useFirestore();
+  const vocabQuery = useMemo(() => collection(firestore, "vocabulary"), [firestore]);
+  const { data: dbVocab, loading: dbLoading } = useCollection<any>(vocabQuery);
+
   // Game State
   const [currentWord, setCurrentWord] = useState<any>(null);
   const [scrambled, setScrambled] = useState<string[]>([]);
   const [userInput, setUserInput] = useState<string[]>([]);
   const [points, setPoints] = useState(0);
   const [streak, setStreak] = useState(0);
-  const [hintsLeft, setHintsLeft] = useState(3);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [showExitDialog, setShowExitDialog] = useState(false);
-  const [pendingPath, setPendingPath] = useState<string | null>(null);
   
   useEffect(() => {
     setMounted(true);
@@ -79,20 +79,21 @@ export default function WordGamePage() {
   };
 
   const nextLevel = useCallback(() => {
-    const randomIndex = Math.floor(Math.random() * INITIAL_VOCABULARY.length);
-    const wordObj = INITIAL_VOCABULARY[randomIndex];
+    if (dbVocab.length === 0) return;
+    const randomIndex = Math.floor(Math.random() * dbVocab.length);
+    const wordObj = dbVocab[randomIndex];
     
     setCurrentWord(wordObj);
     setScrambled(scrambleWord(wordObj.ngaju));
     setUserInput([]);
     setIsCorrect(null);
-  }, []);
+  }, [dbVocab]);
 
   useEffect(() => {
-    if (mounted && !currentWord) {
+    if (mounted && !currentWord && dbVocab.length > 0) {
       nextLevel();
     }
-  }, [mounted, currentWord, nextLevel]);
+  }, [mounted, currentWord, nextLevel, dbVocab]);
 
   const handleLetterClick = (letter: string, index: number) => {
     if (isCorrect !== null) return;
@@ -154,61 +155,51 @@ export default function WordGamePage() {
     return (current / range) * 100;
   }, [points, currentLevelInfo, nextLevelInfo]);
 
-  if (!mounted) {
+  const handleExit = () => {
+    setShowExitDialog(true);
+  };
+
+  if (!mounted) return null;
+
+  if (dbLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
         <Loader2 className="w-10 h-10 animate-spin text-primary" />
-        <p className="text-muted-foreground font-medium">Memuat game...</p>
+        <p className="text-muted-foreground font-medium">Memuat database game...</p>
       </div>
     );
   }
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <Card className="bg-primary/5 border-none shadow-sm">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="bg-primary/10 p-2 rounded-lg text-primary">
-                <Trophy className="w-6 h-6" />
-              </div>
-              <div>
-                <p className="text-xs font-bold text-muted-foreground uppercase">Poin</p>
-                <p className="text-2xl font-headline font-bold text-primary">{points}</p>
-              </div>
-            </div>
-            {streak > 0 && (
-              <div className="flex flex-col items-center">
-                <Zap className="w-5 h-5 text-orange-500 fill-orange-500 animate-pulse" />
-                <span className="text-[10px] font-bold text-orange-500">{streak}x</span>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-        
-        <Card className="bg-primary/5 border-none shadow-sm md:col-span-2">
-          <CardContent className="p-4">
-            <div className="flex justify-between items-end mb-2">
-              <div>
-                <p className="text-xs font-bold text-muted-foreground uppercase">Level</p>
-                <p className="text-lg font-headline font-bold text-primary">{currentLevelInfo.label}</p>
-              </div>
-              {nextLevelInfo && (
-                <p className="text-xs font-bold text-muted-foreground">
-                  {nextLevelInfo.min - points} poin lagi ke {nextLevelInfo.label}
-                </p>
-              )}
-            </div>
-            <Progress value={progressValue} className="h-2" />
-          </CardContent>
-        </Card>
+      <div className="flex justify-between items-center mb-8">
+        <Button variant="ghost" onClick={handleExit} className="text-muted-foreground">
+          Keluar Game
+        </Button>
+        <div className="flex items-center gap-4">
+          <Badge variant="outline" className="text-primary font-bold px-3 py-1">
+            {currentLevelInfo.label}
+          </Badge>
+          <div className="flex items-center gap-1 font-bold text-primary">
+            <Trophy className="w-5 h-5" />
+            {points}
+          </div>
+        </div>
       </div>
 
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-2xl mx-auto space-y-6">
+        <div className="space-y-2">
+          <div className="flex justify-between items-end text-xs font-bold uppercase tracking-widest text-muted-foreground">
+            <span>Progress Level</span>
+            {nextLevelInfo && <span>{nextLevelInfo.min - points} poin lagi ke {nextLevelInfo.label}</span>}
+          </div>
+          <Progress value={progressValue} className="h-2 shadow-inner" />
+        </div>
+
         <Card className="shadow-2xl border-none overflow-hidden bg-white">
           <div className="h-2 bg-primary" />
-          <CardHeader className="text-center relative">
-            <CardTitle className="text-xl text-muted-foreground pt-4">Susun Kata Ini:</CardTitle>
+          <CardHeader className="text-center">
+            <CardTitle className="text-xl text-muted-foreground pt-4">Susun Kosakata {currentWord?.category}:</CardTitle>
             <CardDescription className="text-3xl font-bold text-foreground">
               "{currentWord?.indonesian}"
             </CardDescription>
@@ -257,6 +248,7 @@ export default function WordGamePage() {
                   <CheckCircle2 className="w-8 h-8" />
                   Bagus Sekali!
                 </div>
+                {streak > 0 && <span className="text-orange-500 flex items-center gap-1"><Zap className="w-4 h-4 fill-current"/> {streak} Streak!</span>}
               </div>
             )}
           </CardContent>
@@ -267,7 +259,7 @@ export default function WordGamePage() {
                 className="w-full h-14 text-lg rounded-full gap-2 shadow-lg"
                 onClick={nextLevel}
               >
-                Kata Selanjutnya <ArrowRight className="w-5 h-5" />
+                Lanjut <ArrowRight className="w-5 h-5" />
               </Button>
             ) : (
               <Button 
@@ -282,6 +274,23 @@ export default function WordGamePage() {
           </CardFooter>
         </Card>
       </div>
+
+      <AlertDialog open={showExitDialog} onOpenChange={setShowExitDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Apakah Anda yakin ingin keluar?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Semua progres permainan yang sedang berlangsung dalam sesi ini akan direset. Poin total yang sudah tersimpan tetap aman.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button variant="outline" onClick={() => setShowExitDialog(false)}>Lanjut Bermain</Button>
+            <AlertDialogAction onClick={() => router.push("/")} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Keluar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
