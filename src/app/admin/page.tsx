@@ -19,7 +19,8 @@ import {
   FileArchive,
   AlertTriangle,
   X,
-  Info
+  Info,
+  BarChart3
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -137,8 +138,6 @@ export default function AdminDashboardPage() {
     }
   };
 
-  // --- FITUR IMPOR MASSAL ---
-
   const handleFileImport = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -160,7 +159,7 @@ export default function AdminDashboardPage() {
         })).filter(item => item.indonesian && item.ngaju);
 
         setPreviewData(normalizedData);
-        toast({ title: "File terbaca!", description: `Ditemukan ${normalizedData.length} kosakata.` });
+        toast({ title: "File terbaca!", description: `Ditemukan ${normalizedData.length} kosakata baru dalam file.` });
       } catch (error: any) {
         toast({ variant: "destructive", title: "Gagal membaca file", description: "Pastikan format file benar." });
       } finally {
@@ -175,6 +174,7 @@ export default function AdminDashboardPage() {
     setIsSaving(true);
     setImportProgress(0);
 
+    // Mencegah penghapusan data lama: mapping data yang sudah ada
     const existingMap = new Map();
     vocabList?.forEach(v => {
       const key = v.ngaju?.toLowerCase().trim();
@@ -194,10 +194,12 @@ export default function AdminDashboardPage() {
           const key = item.ngaju?.toLowerCase().trim();
           if (!key) return;
 
+          // Hindari duplikasi dalam file yang sama
           if (processedKeysInFile.has(key)) return;
           processedKeysInFile.add(key);
 
           if (existingMap.has(key)) {
+            // Update data yang sudah ada (tidak menghapus)
             const existingId = existingMap.get(key);
             const docRef = doc(firestore, "vocabulary", existingId);
             batch.update(docRef, {
@@ -205,6 +207,7 @@ export default function AdminDashboardPage() {
               category: item.category
             });
           } else {
+            // Tambahkan data baru
             const docRef = doc(collection(firestore, "vocabulary"));
             batch.set(docRef, {
               indonesian: item.indonesian,
@@ -222,7 +225,7 @@ export default function AdminDashboardPage() {
 
       toast({ 
         title: "Impor Berhasil!", 
-        description: `Total ${processedCount} kosakata telah masuk ke database.`,
+        description: `Total ${processedCount} data telah diproses tanpa menghapus data lama.`,
         variant: "default"
       });
       setPreviewData([]);
@@ -258,7 +261,7 @@ export default function AdminDashboardPage() {
       let processed = 0;
       const total = audioFiles.length;
 
-      // Proses dalam chunks untuk kecepatan
+      // Proses dalam chunks paralel
       const chunkSize = 5; 
       for (let i = 0; i < total; i += chunkSize) {
         const chunk = audioFiles.slice(i, i + chunkSize);
@@ -291,7 +294,7 @@ export default function AdminDashboardPage() {
 
       toast({ 
         title: "Audio ZIP Selesai!", 
-        description: `${processed} file audio telah dihubungkan ke kosakata.`,
+        description: `${processed} file audio telah dihubungkan otomatis.`,
       });
     } catch (error) {
       console.error("ZIP processing error:", error);
@@ -327,7 +330,14 @@ export default function AdminDashboardPage() {
           <h1 className="text-4xl font-headline font-bold mb-2">Dashboard Admin</h1>
           <p className="text-muted-foreground">Kelola database kosakata dengan aman dan cepat.</p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-4 items-center">
+          <Card className="flex items-center gap-4 px-4 py-2 border-primary/20 bg-primary/5">
+            <BarChart3 className="w-5 h-5 text-primary" />
+            <div>
+              <p className="text-[10px] uppercase font-bold text-muted-foreground">Total Database</p>
+              <p className="text-xl font-bold text-primary">{vocabList?.length || 0} Kata</p>
+            </div>
+          </Card>
           <Button variant="ghost" size="sm" onClick={handleLogout} className="text-destructive font-bold">
             <LogOut className="mr-2 h-4 w-4" /> Logout Admin
           </Button>
@@ -353,9 +363,6 @@ export default function AdminDashboardPage() {
                 />
               </div>
               <div className="flex items-center gap-4">
-                <Badge variant="outline" className="px-3 py-1 font-bold text-primary">
-                  Total: {vocabList?.length || 0}
-                </Badge>
                 <Button onClick={() => handleOpenDialog()} className="rounded-full shadow-lg">
                   <Plus className="mr-2 h-4 w-4" /> Tambah Kosakata
                 </Button>
@@ -395,9 +402,9 @@ export default function AdminDashboardPage() {
                         </TableCell>
                         <TableCell>
                           {word.audioUrl ? (
-                            <Badge variant="secondary" className="bg-green-100 text-green-700">Ada</Badge>
+                            <Badge variant="secondary" className="bg-green-100 text-green-700">Tersedia</Badge>
                           ) : (
-                            <span className="text-xs text-muted-foreground">Tidak Ada</span>
+                            <span className="text-xs text-muted-foreground">Kosong</span>
                           )}
                         </TableCell>
                         <TableCell className="text-right space-x-2">
@@ -425,14 +432,14 @@ export default function AdminDashboardPage() {
                   <FileSpreadsheet className="w-5 h-5 text-green-600" />
                   Impor Kosakata (Excel/CSV)
                 </CardTitle>
-                <CardDescription>Tambah banyak kosakata sekaligus tanpa menghapus data lama.</CardDescription>
+                <CardDescription>Tambah atau perbarui ribuan data sekaligus. Data lama tetap aman.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex flex-col gap-4 p-6 border-2 border-dashed rounded-2xl bg-muted/10 items-center text-center">
                   <input type="file" ref={fileInputRef} className="hidden" accept=".xlsx,.xls,.csv" onChange={handleFileImport} />
                   <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSaving || isProcessingFile}>
                     {isProcessingFile ? <Loader2 className="animate-spin mr-2" /> : null}
-                    Pilih File Excel/CSV
+                    Pilih File Spreadsheet
                   </Button>
                 </div>
                 <Button variant="ghost" className="w-full gap-2 text-primary" onClick={downloadTemplate}>
@@ -471,7 +478,7 @@ export default function AdminDashboardPage() {
               <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div>
                   <CardTitle>Pratinjau Impor</CardTitle>
-                  <CardDescription>Ditemukan {previewData.length} data. Sistem akan memperbarui data jika kata sudah ada.</CardDescription>
+                  <CardDescription>Ditemukan {previewData.length} baris data. Sistem akan menggabungkan dengan database yang sudah ada.</CardDescription>
                 </div>
                 <div className="flex gap-2 w-full md:w-auto">
                   <Button variant="ghost" onClick={() => setPreviewData([])} disabled={isSaving}>
@@ -508,7 +515,7 @@ export default function AdminDashboardPage() {
                 {previewData.length > 100 && (
                   <div className="mt-4 flex items-center gap-2 p-3 bg-blue-50 text-blue-700 rounded-lg text-sm">
                     <Info className="w-4 h-4" />
-                    Pratinjau dibatasi 100 baris untuk menjaga performa browser.
+                    Pratinjau dibatasi 100 baris pertama untuk performa. Total {previewData.length} data akan tetap diimpor.
                   </div>
                 )}
               </CardContent>
