@@ -49,7 +49,6 @@ export default function AdminDashboardPage() {
   // Impor Massal States
   const [previewData, setPreviewData] = useState<any[]>([]);
   const [importProgress, setImportProgress] = useState(0);
-  const [importSummary, setImportSummary] = useState({ total: 0, success: 0, fail: 0 });
   const [isProcessingFile, setIsProcessingFile] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -110,7 +109,6 @@ export default function AdminDashboardPage() {
         await updateDoc(doc(firestore, "vocabulary", editingWord.id), formData);
         toast({ title: "Kosakata diperbarui!" });
       } else {
-        // Cek duplikat sebelum tambah satuan
         const existing = vocabList?.find(v => v.ngaju.toLowerCase().trim() === formData.ngaju.toLowerCase().trim());
         if (existing) {
           await updateDoc(doc(firestore, "vocabulary", existing.id), formData);
@@ -156,13 +154,13 @@ export default function AdminDashboardPage() {
         const json = XLSX.utils.sheet_to_json(worksheet);
 
         const normalizedData = json.map((item: any) => ({
-          indonesian: item.Indonesia || item.indonesian || item.indonesia || "",
-          ngaju: item["Dayak Ngaju"] || item.ngaju || item.dayak || "",
-          category: item.Kategori || item.category || "Umum",
+          indonesian: String(item.Indonesia || item.indonesian || item.indonesia || "").trim(),
+          ngaju: String(item["Dayak Ngaju"] || item.ngaju || item.dayak || "").trim(),
+          category: String(item.Kategori || item.category || "Umum").trim(),
         })).filter(item => item.indonesian && item.ngaju);
 
         setPreviewData(normalizedData);
-        setImportSummary({ total: normalizedData.length, success: 0, fail: 0 });
+        toast({ title: "File terbaca!", description: `Ditemukan ${normalizedData.length} kosakata.` });
       } catch (error: any) {
         toast({ variant: "destructive", title: "Gagal membaca file", description: "Pastikan format file benar." });
       } finally {
@@ -177,68 +175,64 @@ export default function AdminDashboardPage() {
     setIsSaving(true);
     setImportProgress(0);
 
-    // Buat map kosakata yang sudah ada untuk pengecekan duplikat cepat
     const existingMap = new Map();
     vocabList?.forEach(v => {
       const key = v.ngaju?.toLowerCase().trim();
       if (key) existingMap.set(key, v.id);
     });
 
-    const batchSize = 400; // Ukuran batch Firestore yang aman
+    const batchSize = 450; 
     let processedCount = 0;
     const processedKeysInFile = new Set();
 
-    for (let i = 0; i < previewData.length; i += batchSize) {
-      const batch = writeBatch(firestore);
-      const chunk = previewData.slice(i, i + batchSize);
+    try {
+      for (let i = 0; i < previewData.length; i += batchSize) {
+        const batch = writeBatch(firestore);
+        const chunk = previewData.slice(i, i + batchSize);
 
-      chunk.forEach(item => {
-        const key = item.ngaju?.toLowerCase().trim();
-        if (!key) return;
+        chunk.forEach(item => {
+          const key = item.ngaju?.toLowerCase().trim();
+          if (!key) return;
 
-        // Hindari memproses kata yang sama dua kali dalam satu file impor
-        if (processedKeysInFile.has(key)) return;
-        processedKeysInFile.add(key);
+          if (processedKeysInFile.has(key)) return;
+          processedKeysInFile.add(key);
 
-        if (existingMap.has(key)) {
-          // JIKA SUDAH ADA: Perbarui (Jangan hapus)
-          const existingId = existingMap.get(key);
-          const docRef = doc(firestore, "vocabulary", existingId);
-          batch.update(docRef, {
-            indonesian: item.indonesian,
-            category: item.category
-            // audioUrl dipertahankan jika sudah ada
-          });
-        } else {
-          // JIKA BELUM ADA: Tambahkan baru
-          const docRef = doc(collection(firestore, "vocabulary"));
-          batch.set(docRef, {
-            indonesian: item.indonesian,
-            ngaju: item.ngaju,
-            category: item.category,
-            audioUrl: ""
-          });
-        }
-      });
+          if (existingMap.has(key)) {
+            const existingId = existingMap.get(key);
+            const docRef = doc(firestore, "vocabulary", existingId);
+            batch.update(docRef, {
+              indonesian: item.indonesian,
+              category: item.category
+            });
+          } else {
+            const docRef = doc(collection(firestore, "vocabulary"));
+            batch.set(docRef, {
+              indonesian: item.indonesian,
+              ngaju: item.ngaju,
+              category: item.category,
+              audioUrl: ""
+            });
+          }
+        });
 
-      try {
         await batch.commit();
         processedCount += chunk.length;
-      } catch (err) {
-        console.error("Batch commit error:", err);
+        setImportProgress(Math.round((processedCount / previewData.length) * 100));
       }
-      
-      const progress = Math.round(((i + chunk.length) / previewData.length) * 100);
-      setImportProgress(progress);
-    }
 
-    toast({ 
-      title: "Impor Selesai!", 
-      description: `${processedCount} data diproses. Data lama tetap aman.` 
-    });
-    setPreviewData([]);
-    if (fileInputRef.current) fileInputRef.current.value = "";
-    setIsSaving(false);
+      toast({ 
+        title: "Impor Berhasil!", 
+        description: `Total ${processedCount} kosakata telah masuk ke database.`,
+        variant: "default"
+      });
+      setPreviewData([]);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    } catch (error) {
+      console.error("Import error:", error);
+      toast({ variant: "destructive", title: "Terjadi kesalahan saat impor" });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleZipAudioUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -251,51 +245,57 @@ export default function AdminDashboardPage() {
     try {
       const zip = new JSZip();
       const content = await zip.loadAsync(file);
-      const files = Object.keys(content.files).filter(name => !content.files[name].dir && (name.endsWith('.mp3') || name.endsWith('.wav')));
+      const audioFiles = Object.keys(content.files).filter(name => 
+        !content.files[name].dir && (name.toLowerCase().endsWith('.mp3') || name.toLowerCase().endsWith('.wav'))
+      );
       
-      if (files.length === 0) {
-        toast({ variant: "destructive", title: "ZIP Kosong", description: "Tidak ditemukan file audio." });
+      if (audioFiles.length === 0) {
+        toast({ variant: "destructive", title: "ZIP Kosong", description: "Tidak ditemukan file audio (.mp3/.wav)." });
         setIsSaving(false);
         return;
       }
 
       let processed = 0;
-      let currentBatch = writeBatch(firestore);
-      let batchCount = 0;
+      const total = audioFiles.length;
 
-      for (const fileName of files) {
-        const audioFile = await content.files[fileName].async("blob");
-        const cleanFileName = fileName.split('/').pop() || fileName;
-        const storageRef = ref(storage, `vocabulary_audio/${cleanFileName}`);
+      // Proses dalam chunks untuk kecepatan
+      const chunkSize = 5; 
+      for (let i = 0; i < total; i += chunkSize) {
+        const chunk = audioFiles.slice(i, i + chunkSize);
         
-        await uploadBytes(storageRef, audioFile);
-        const downloadUrl = await getDownloadURL(storageRef);
+        await Promise.all(chunk.map(async (fileName) => {
+          const audioBlob = await content.files[fileName].async("blob");
+          const cleanFileName = fileName.split('/').pop() || fileName;
+          const storageRef = ref(storage, `vocabulary_audio/${cleanFileName}`);
+          
+          await uploadBytes(storageRef, audioBlob);
+          const downloadUrl = await getDownloadURL(storageRef);
 
-        const wordName = cleanFileName.replace(/\.(mp3|wav)$/, "").toLowerCase().trim();
-        
-        const q = query(collection(firestore, "vocabulary"), where("ngaju", "==", wordName), limit(5));
-        const qSnap = await getDocs(q);
-        
-        qSnap.forEach(d => {
-          currentBatch.update(d.ref, { audioUrl: downloadUrl });
-          batchCount++;
-        });
+          const wordName = cleanFileName.replace(/\.(mp3|wav|MP3|WAV)$/, "").toLowerCase().trim();
+          
+          const q = query(collection(firestore, "vocabulary"), where("ngaju", "==", wordName), limit(5));
+          const qSnap = await getDocs(q);
+          
+          if (!qSnap.empty) {
+            const batch = writeBatch(firestore);
+            qSnap.forEach(d => {
+              batch.update(d.ref, { audioUrl: downloadUrl });
+            });
+            await batch.commit();
+          }
+        }));
 
-        if (batchCount >= 400) {
-          await currentBatch.commit();
-          currentBatch = writeBatch(firestore);
-          batchCount = 0;
-        }
-
-        processed++;
-        setImportProgress(Math.round((processed / files.length) * 100));
+        processed += chunk.length;
+        setImportProgress(Math.round((processed / total) * 100));
       }
 
-      if (batchCount > 0) await currentBatch.commit();
-
-      toast({ title: "Audio ZIP Selesai", description: `${processed} audio dihubungkan.` });
+      toast({ 
+        title: "Audio ZIP Selesai!", 
+        description: `${processed} file audio telah dihubungkan ke kosakata.`,
+      });
     } catch (error) {
-      toast({ variant: "destructive", title: "Gagal memproses ZIP" });
+      console.error("ZIP processing error:", error);
+      toast({ variant: "destructive", title: "Gagal memproses file ZIP" });
     } finally {
       setIsSaving(false);
       if (zipInputRef.current) zipInputRef.current.value = "";
@@ -430,7 +430,8 @@ export default function AdminDashboardPage() {
               <CardContent className="space-y-4">
                 <div className="flex flex-col gap-4 p-6 border-2 border-dashed rounded-2xl bg-muted/10 items-center text-center">
                   <input type="file" ref={fileInputRef} className="hidden" accept=".xlsx,.xls,.csv" onChange={handleFileImport} />
-                  <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSaving}>
+                  <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSaving || isProcessingFile}>
+                    {isProcessingFile ? <Loader2 className="animate-spin mr-2" /> : null}
                     Pilih File Excel/CSV
                   </Button>
                 </div>
@@ -470,7 +471,7 @@ export default function AdminDashboardPage() {
               <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div>
                   <CardTitle>Pratinjau Impor</CardTitle>
-                  <CardDescription>Ditemukan {previewData.length} data. Sistem akan menambah data baru dan memperbarui data lama.</CardDescription>
+                  <CardDescription>Ditemukan {previewData.length} data. Sistem akan memperbarui data jika kata sudah ada.</CardDescription>
                 </div>
                 <div className="flex gap-2 w-full md:w-auto">
                   <Button variant="ghost" onClick={() => setPreviewData([])} disabled={isSaving}>
@@ -478,7 +479,7 @@ export default function AdminDashboardPage() {
                   </Button>
                   <Button onClick={executeBulkImport} disabled={isSaving}>
                     {isSaving ? <Loader2 className="animate-spin mr-2" /> : <CheckCircle2 className="mr-2" />}
-                    Impor Sekarang
+                    Impor {previewData.length} Data
                   </Button>
                 </div>
               </CardHeader>
@@ -507,7 +508,7 @@ export default function AdminDashboardPage() {
                 {previewData.length > 100 && (
                   <div className="mt-4 flex items-center gap-2 p-3 bg-blue-50 text-blue-700 rounded-lg text-sm">
                     <Info className="w-4 h-4" />
-                    Pratinjau dibatasi 100 baris untuk performa browser yang lancar.
+                    Pratinjau dibatasi 100 baris untuk menjaga performa browser.
                   </div>
                 )}
               </CardContent>
