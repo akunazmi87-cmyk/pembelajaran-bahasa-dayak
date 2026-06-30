@@ -33,7 +33,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { useCollection, useFirestore, useStorage } from "@/firebase";
-import { collection, addDoc, updateDoc, deleteDoc, doc, writeBatch, query, where, getDocs, limit } from "firebase/firestore";
+import { collection, addDoc, updateDoc, deleteDoc, doc, writeBatch, query, where, getDocs, limit, setDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import * as XLSX from "xlsx";
 import JSZip from "jszip";
@@ -110,12 +110,19 @@ export default function AdminDashboardPage() {
         await updateDoc(doc(firestore, "vocabulary", editingWord.id), formData);
         toast({ title: "Kosakata diperbarui!" });
       } else {
-        await addDoc(collection(firestore, "vocabulary"), formData);
-        toast({ title: "Kosakata baru ditambahkan!" });
+        // Cek duplikat sebelum tambah satuan
+        const existing = vocabList?.find(v => v.ngaju.toLowerCase().trim() === formData.ngaju.toLowerCase().trim());
+        if (existing) {
+          await updateDoc(doc(firestore, "vocabulary", existing.id), formData);
+          toast({ title: "Kosakata sudah ada, data diperbarui!" });
+        } else {
+          await addDoc(collection(firestore, "vocabulary"), formData);
+          toast({ title: "Kosakata baru ditambahkan!" });
+        }
       }
       setIsDialogOpen(false);
     } catch (error) {
-      toast({ variant: "destructive", title: "Gagal menyimpan data ke Firestore" });
+      toast({ variant: "destructive", title: "Gagal menyimpan data" });
     } finally {
       setIsSaving(false);
     }
@@ -170,37 +177,65 @@ export default function AdminDashboardPage() {
     setIsSaving(true);
     setImportProgress(0);
 
-    const batchSize = 500;
-    let successCount = 0;
-    let failCount = 0;
+    // Buat map kosakata yang sudah ada untuk pengecekan duplikat cepat
+    const existingMap = new Map();
+    vocabList?.forEach(v => {
+      const key = v.ngaju?.toLowerCase().trim();
+      if (key) existingMap.set(key, v.id);
+    });
+
+    const batchSize = 400; // Ukuran batch Firestore yang aman
+    let processedCount = 0;
+    const processedKeysInFile = new Set();
 
     for (let i = 0; i < previewData.length; i += batchSize) {
       const batch = writeBatch(firestore);
       const chunk = previewData.slice(i, i + batchSize);
 
       chunk.forEach(item => {
-        const docRef = doc(collection(firestore, "vocabulary"));
-        batch.set(docRef, {
-          indonesian: item.indonesian,
-          ngaju: item.ngaju,
-          category: item.category,
-          audioUrl: ""
-        });
+        const key = item.ngaju?.toLowerCase().trim();
+        if (!key) return;
+
+        // Hindari memproses kata yang sama dua kali dalam satu file impor
+        if (processedKeysInFile.has(key)) return;
+        processedKeysInFile.add(key);
+
+        if (existingMap.has(key)) {
+          // JIKA SUDAH ADA: Perbarui (Jangan hapus)
+          const existingId = existingMap.get(key);
+          const docRef = doc(firestore, "vocabulary", existingId);
+          batch.update(docRef, {
+            indonesian: item.indonesian,
+            category: item.category
+            // audioUrl dipertahankan jika sudah ada
+          });
+        } else {
+          // JIKA BELUM ADA: Tambahkan baru
+          const docRef = doc(collection(firestore, "vocabulary"));
+          batch.set(docRef, {
+            indonesian: item.indonesian,
+            ngaju: item.ngaju,
+            category: item.category,
+            audioUrl: ""
+          });
+        }
       });
 
       try {
         await batch.commit();
-        successCount += chunk.length;
+        processedCount += chunk.length;
       } catch (err) {
-        failCount += chunk.length;
+        console.error("Batch commit error:", err);
       }
       
       const progress = Math.round(((i + chunk.length) / previewData.length) * 100);
       setImportProgress(progress);
-      setImportSummary(prev => ({ ...prev, success: successCount, fail: failCount }));
     }
 
-    toast({ title: "Impor Selesai!", description: `${successCount} berhasil, ${failCount} gagal.` });
+    toast({ 
+      title: "Impor Selesai!", 
+      description: `${processedCount} data diproses. Data lama tetap aman.` 
+    });
     setPreviewData([]);
     if (fileInputRef.current) fileInputRef.current.value = "";
     setIsSaving(false);
@@ -219,13 +254,12 @@ export default function AdminDashboardPage() {
       const files = Object.keys(content.files).filter(name => !content.files[name].dir && (name.endsWith('.mp3') || name.endsWith('.wav')));
       
       if (files.length === 0) {
-        toast({ variant: "destructive", title: "ZIP Kosong", description: "Tidak ditemukan file audio (.mp3/.wav)" });
+        toast({ variant: "destructive", title: "ZIP Kosong", description: "Tidak ditemukan file audio." });
         setIsSaving(false);
         return;
       }
 
       let processed = 0;
-      const batchSize = 100; // Batch komit firestore
       let currentBatch = writeBatch(firestore);
       let batchCount = 0;
 
@@ -234,12 +268,10 @@ export default function AdminDashboardPage() {
         const cleanFileName = fileName.split('/').pop() || fileName;
         const storageRef = ref(storage, `vocabulary_audio/${cleanFileName}`);
         
-        // 1. Upload ke Storage
         await uploadBytes(storageRef, audioFile);
         const downloadUrl = await getDownloadURL(storageRef);
 
-        // 2. Hubungkan ke Kosakata
-        const wordName = cleanFileName.replace(/\.(mp3|wav)$/, "").toLowerCase();
+        const wordName = cleanFileName.replace(/\.(mp3|wav)$/, "").toLowerCase().trim();
         
         const q = query(collection(firestore, "vocabulary"), where("ngaju", "==", wordName), limit(5));
         const qSnap = await getDocs(q);
@@ -249,7 +281,6 @@ export default function AdminDashboardPage() {
           batchCount++;
         });
 
-        // Commit batch jika sudah mencapai batas atau di akhir loop
         if (batchCount >= 400) {
           await currentBatch.commit();
           currentBatch = writeBatch(firestore);
@@ -260,14 +291,11 @@ export default function AdminDashboardPage() {
         setImportProgress(Math.round((processed / files.length) * 100));
       }
 
-      if (batchCount > 0) {
-        await currentBatch.commit();
-      }
+      if (batchCount > 0) await currentBatch.commit();
 
-      toast({ title: "Upload Audio ZIP Selesai", description: `${processed} file audio telah diproses.` });
+      toast({ title: "Audio ZIP Selesai", description: `${processed} audio dihubungkan.` });
     } catch (error) {
-      console.error(error);
-      toast({ variant: "destructive", title: "Gagal memproses ZIP", description: "Pastikan file ZIP valid dan koneksi stabil." });
+      toast({ variant: "destructive", title: "Gagal memproses ZIP" });
     } finally {
       setIsSaving(false);
       if (zipInputRef.current) zipInputRef.current.value = "";
@@ -297,7 +325,7 @@ export default function AdminDashboardPage() {
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
         <div>
           <h1 className="text-4xl font-headline font-bold mb-2">Dashboard Admin</h1>
-          <p className="text-muted-foreground">Kelola database kosakata secara dinamis dan efisien.</p>
+          <p className="text-muted-foreground">Kelola database kosakata dengan aman dan cepat.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="ghost" size="sm" onClick={handleLogout} className="text-destructive font-bold">
@@ -326,7 +354,7 @@ export default function AdminDashboardPage() {
               </div>
               <div className="flex items-center gap-4">
                 <Badge variant="outline" className="px-3 py-1 font-bold text-primary">
-                  Total: {vocabList?.length || 0} Kosakata
+                  Total: {vocabList?.length || 0}
                 </Badge>
                 <Button onClick={() => handleOpenDialog()} className="rounded-full shadow-lg">
                   <Plus className="mr-2 h-4 w-4" /> Tambah Kosakata
@@ -354,7 +382,7 @@ export default function AdminDashboardPage() {
                   ) : filteredVocab.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={5} className="h-48 text-center text-muted-foreground italic">
-                        Belum ada data. Silakan tambah atau gunakan fitur Impor Massal.
+                        Belum ada data.
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -397,7 +425,7 @@ export default function AdminDashboardPage() {
                   <FileSpreadsheet className="w-5 h-5 text-green-600" />
                   Impor Kosakata (Excel/CSV)
                 </CardTitle>
-                <CardDescription>Unggah file spreadsheet untuk menambahkan banyak kosakata sekaligus.</CardDescription>
+                <CardDescription>Tambah banyak kosakata sekaligus tanpa menghapus data lama.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex flex-col gap-4 p-6 border-2 border-dashed rounded-2xl bg-muted/10 items-center text-center">
@@ -405,7 +433,6 @@ export default function AdminDashboardPage() {
                   <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSaving}>
                     Pilih File Excel/CSV
                   </Button>
-                  <p className="text-xs text-muted-foreground">Sistem mendukung ribuan baris data.</p>
                 </div>
                 <Button variant="ghost" className="w-full gap-2 text-primary" onClick={downloadTemplate}>
                   <Download className="w-4 h-4" /> Download Template Excel
@@ -419,7 +446,7 @@ export default function AdminDashboardPage() {
                   <FileArchive className="w-5 h-5 text-blue-600" />
                   Upload Audio Massal (ZIP)
                 </CardTitle>
-                <CardDescription>Unggah file ZIP berisi audio untuk dihubungkan otomatis ke kosakata.</CardDescription>
+                <CardDescription>Unggah ZIP audio untuk dihubungkan otomatis ke kosakata.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex flex-col gap-4 p-6 border-2 border-dashed rounded-2xl bg-muted/10 items-center text-center">
@@ -427,7 +454,6 @@ export default function AdminDashboardPage() {
                   <Button variant="outline" onClick={() => zipInputRef.current?.click()} disabled={isSaving}>
                     Pilih File ZIP Audio
                   </Button>
-                  <p className="text-xs text-muted-foreground">Nama file audio harus sama dengan teks Dayak Ngaju.</p>
                 </div>
                 {isSaving && importProgress > 0 && (
                   <div className="space-y-2">
@@ -443,14 +469,14 @@ export default function AdminDashboardPage() {
             <Card className="mt-8 shadow-2xl border-none">
               <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div>
-                  <CardTitle>Pratinjau Data Impor</CardTitle>
-                  <CardDescription>Ditemukan {previewData.length} baris data (Menampilkan 100 baris pertama untuk performa).</CardDescription>
+                  <CardTitle>Pratinjau Impor</CardTitle>
+                  <CardDescription>Ditemukan {previewData.length} data. Sistem akan menambah data baru dan memperbarui data lama.</CardDescription>
                 </div>
                 <div className="flex gap-2 w-full md:w-auto">
-                  <Button variant="ghost" onClick={() => setPreviewData([])} disabled={isSaving} className="flex-1 md:flex-none">
+                  <Button variant="ghost" onClick={() => setPreviewData([])} disabled={isSaving}>
                     <X className="w-4 h-4 mr-2" /> Batal
                   </Button>
-                  <Button onClick={executeBulkImport} disabled={isSaving} className="flex-1 md:flex-none">
+                  <Button onClick={executeBulkImport} disabled={isSaving}>
                     {isSaving ? <Loader2 className="animate-spin mr-2" /> : <CheckCircle2 className="mr-2" />}
                     Impor Sekarang
                   </Button>
@@ -481,7 +507,7 @@ export default function AdminDashboardPage() {
                 {previewData.length > 100 && (
                   <div className="mt-4 flex items-center gap-2 p-3 bg-blue-50 text-blue-700 rounded-lg text-sm">
                     <Info className="w-4 h-4" />
-                    Data lainnya disembunyikan dari pratinjau untuk mempercepat performa browser.
+                    Pratinjau dibatasi 100 baris untuk performa browser yang lancar.
                   </div>
                 )}
               </CardContent>
@@ -493,28 +519,23 @@ export default function AdminDashboardPage() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>{editingWord ? "Edit Kosakata" : "Tambah Kosakata Baru"}</DialogTitle>
-            <DialogDescription>
-              Isi data di bawah ini untuk memperbarui database secara real-time.
-            </DialogDescription>
+            <DialogTitle>{editingWord ? "Edit Kosakata" : "Tambah Kosakata"}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="indonesian">Bahasa Indonesia</Label>
+              <Label htmlFor="indonesian">Indonesia</Label>
               <Input 
                 id="indonesian" 
                 value={formData.indonesian} 
                 onChange={(e) => setFormData({...formData, indonesian: e.target.value})}
-                placeholder="Contoh: Makan"
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="ngaju">Bahasa Dayak Ngaju</Label>
+              <Label htmlFor="ngaju">Dayak Ngaju</Label>
               <Input 
                 id="ngaju" 
                 value={formData.ngaju} 
                 onChange={(e) => setFormData({...formData, ngaju: e.target.value})}
-                placeholder="Contoh: Kuman"
               />
             </div>
             <div className="grid gap-2">
@@ -524,7 +545,7 @@ export default function AdminDashboardPage() {
                 onValueChange={(v) => setFormData({...formData, category: v})}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Pilih Kategori" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {categories.map(cat => (
@@ -534,22 +555,18 @@ export default function AdminDashboardPage() {
               </Select>
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="audio">URL Audio (Opsional)</Label>
+              <Label htmlFor="audio">URL Audio</Label>
               <Input 
                 id="audio" 
                 value={formData.audioUrl} 
                 onChange={(e) => setFormData({...formData, audioUrl: e.target.value})}
-                placeholder="https://example.com/audio.mp3"
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={isSaving}>
-              Batal
-            </Button>
             <Button onClick={handleSave} disabled={isSaving}>
-              {isSaving ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Save className="mr-2 h-4 w-4" />}
-              Simpan Data
+              {isSaving && <Loader2 className="animate-spin mr-2 h-4 w-4" />}
+              Simpan
             </Button>
           </DialogFooter>
         </DialogContent>
