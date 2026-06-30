@@ -19,8 +19,7 @@ import {
   FileArchive,
   AlertTriangle,
   X,
-  Info,
-  BarChart3
+  Info
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -159,7 +158,7 @@ export default function AdminDashboardPage() {
         })).filter(item => item.indonesian && item.ngaju);
 
         setPreviewData(normalizedData);
-        toast({ title: "File terbaca!", description: `Ditemukan ${normalizedData.length} kosakata baru dalam file.` });
+        toast({ title: "File terbaca!", description: `Ditemukan ${normalizedData.length} kosakata dalam file.` });
       } catch (error: any) {
         toast({ variant: "destructive", title: "Gagal membaca file", description: "Pastikan format file benar." });
       } finally {
@@ -174,7 +173,6 @@ export default function AdminDashboardPage() {
     setIsSaving(true);
     setImportProgress(0);
 
-    // Mencegah penghapusan data lama: mapping data yang sudah ada
     const existingMap = new Map();
     vocabList?.forEach(v => {
       const key = v.ngaju?.toLowerCase().trim();
@@ -194,12 +192,10 @@ export default function AdminDashboardPage() {
           const key = item.ngaju?.toLowerCase().trim();
           if (!key) return;
 
-          // Hindari duplikasi dalam file yang sama
           if (processedKeysInFile.has(key)) return;
           processedKeysInFile.add(key);
 
           if (existingMap.has(key)) {
-            // Update data yang sudah ada (tidak menghapus)
             const existingId = existingMap.get(key);
             const docRef = doc(firestore, "vocabulary", existingId);
             batch.update(docRef, {
@@ -207,7 +203,6 @@ export default function AdminDashboardPage() {
               category: item.category
             });
           } else {
-            // Tambahkan data baru
             const docRef = doc(collection(firestore, "vocabulary"));
             batch.set(docRef, {
               indonesian: item.indonesian,
@@ -226,7 +221,6 @@ export default function AdminDashboardPage() {
       toast({ 
         title: "Impor Berhasil!", 
         description: `Total ${processedCount} data telah diproses tanpa menghapus data lama.`,
-        variant: "default"
       });
       setPreviewData([]);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -260,9 +254,8 @@ export default function AdminDashboardPage() {
 
       let processed = 0;
       const total = audioFiles.length;
-
-      // Proses dalam chunks paralel
       const chunkSize = 5; 
+
       for (let i = 0; i < total; i += chunkSize) {
         const chunk = audioFiles.slice(i, i + chunkSize);
         
@@ -330,18 +323,9 @@ export default function AdminDashboardPage() {
           <h1 className="text-4xl font-headline font-bold mb-2">Dashboard Admin</h1>
           <p className="text-muted-foreground">Kelola database kosakata dengan aman dan cepat.</p>
         </div>
-        <div className="flex flex-wrap gap-4 items-center">
-          <Card className="flex items-center gap-4 px-4 py-2 border-primary/20 bg-primary/5">
-            <BarChart3 className="w-5 h-5 text-primary" />
-            <div>
-              <p className="text-[10px] uppercase font-bold text-muted-foreground">Total Database</p>
-              <p className="text-xl font-bold text-primary">{vocabList?.length || 0} Kata</p>
-            </div>
-          </Card>
-          <Button variant="ghost" size="sm" onClick={handleLogout} className="text-destructive font-bold">
-            <LogOut className="mr-2 h-4 w-4" /> Logout Admin
-          </Button>
-        </div>
+        <Button variant="ghost" size="sm" onClick={handleLogout} className="text-destructive font-bold">
+          <LogOut className="mr-2 h-4 w-4" /> Logout Admin
+        </Button>
       </header>
 
       <Tabs defaultValue="manage" className="space-y-8">
@@ -362,11 +346,9 @@ export default function AdminDashboardPage() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
-              <div className="flex items-center gap-4">
-                <Button onClick={() => handleOpenDialog()} className="rounded-full shadow-lg">
-                  <Plus className="mr-2 h-4 w-4" /> Tambah Kosakata
-                </Button>
-              </div>
+              <Button onClick={() => handleOpenDialog()} className="rounded-full shadow-lg">
+                <Plus className="mr-2 h-4 w-4" /> Tambah Kosakata
+              </Button>
             </div>
             <div className="overflow-x-auto max-h-[600px]">
               <Table>
@@ -478,7 +460,7 @@ export default function AdminDashboardPage() {
               <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div>
                   <CardTitle>Pratinjau Impor</CardTitle>
-                  <CardDescription>Ditemukan {previewData.length} baris data. Sistem akan menggabungkan dengan database yang sudah ada.</CardDescription>
+                  <CardDescription>Ditemukan {previewData.length} baris data.</CardDescription>
                 </div>
                 <div className="flex gap-2 w-full md:w-auto">
                   <Button variant="ghost" onClick={() => setPreviewData([])} disabled={isSaving}>
