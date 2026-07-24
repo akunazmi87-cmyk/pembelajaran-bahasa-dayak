@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { Search, Volume2, Sparkles, ArrowLeftRight, Loader2 } from "lucide-react";
+import { Search, Volume2, Sparkles, ArrowLeftRight, Loader2, ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,13 +14,17 @@ import { useCollection, useFirestore } from "@/firebase";
 import { collection } from "firebase/firestore";
 import { INITIAL_VOCABULARY } from "@/lib/data";
 
+const ITEMS_PER_PAGE = 24;
+
 export default function VocabularyPage() {
   const [mounted, setMounted] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [activeWord, setActiveWord] = useState<any>(null);
   const [examples, setExamples] = useState<string[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
   const { toast } = useToast();
 
   const firestore = useFirestore();
@@ -36,6 +40,15 @@ export default function VocabularyPage() {
     setMounted(true);
   }, []);
 
+  // Debounce search query to prevent lag on every keystroke
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setVisibleCount(ITEMS_PER_PAGE); // Reset visible count on search
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   const combinedVocab = useMemo(() => {
     if (!mounted) return [];
     const dbWords = vocabFromDb || [];
@@ -50,13 +63,19 @@ export default function VocabularyPage() {
   }, [combinedVocab]);
 
   const filteredVocab = useMemo(() => {
+    const query = debouncedSearch.toLowerCase().trim();
     return combinedVocab.filter(v => {
-      const matchesSearch = v.ngaju?.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                           v.indonesian?.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSearch = !query || 
+                           v.ngaju?.toLowerCase().includes(query) || 
+                           v.indonesian?.toLowerCase().includes(query);
       const matchesCategory = selectedCategory ? v.category === selectedCategory : true;
       return matchesSearch && matchesCategory;
     }).sort((a, b) => a.ngaju.localeCompare(b.ngaju));
-  }, [searchQuery, selectedCategory, combinedVocab]);
+  }, [debouncedSearch, selectedCategory, combinedVocab]);
+
+  const visibleVocab = useMemo(() => {
+    return filteredVocab.slice(0, visibleCount);
+  }, [filteredVocab, visibleCount]);
 
   const handleTranslate = async () => {
     if (!translateText.trim()) return;
@@ -126,7 +145,10 @@ export default function VocabularyPage() {
       <div className="flex flex-wrap gap-2 mb-8">
         <Button 
           variant={selectedCategory === null ? "default" : "outline"}
-          onClick={() => setSelectedCategory(null)}
+          onClick={() => {
+            setSelectedCategory(null);
+            setVisibleCount(ITEMS_PER_PAGE);
+          }}
           className="rounded-full"
           size="sm"
         >
@@ -136,7 +158,10 @@ export default function VocabularyPage() {
           <Button 
             key={cat}
             variant={selectedCategory === cat ? "default" : "outline"}
-            onClick={() => setSelectedCategory(cat)}
+            onClick={() => {
+              setSelectedCategory(cat);
+              setVisibleCount(ITEMS_PER_PAGE);
+            }}
             className="rounded-full"
             size="sm"
           >
@@ -146,46 +171,61 @@ export default function VocabularyPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-          {dbLoading ? (
-            <div className="col-span-full py-20 text-center">
-              <Loader2 className="animate-spin inline-block h-8 w-8 text-primary" />
-              <p className="mt-2 text-muted-foreground">Memuat database...</p>
-            </div>
-          ) : filteredVocab.length === 0 ? (
-            <div className="col-span-full py-20 text-center text-muted-foreground italic bg-muted/20 rounded-3xl">
-              Kosakata tidak ditemukan.
-            </div>
-          ) : (
-            filteredVocab.map((item, idx) => (
-              <Card 
-                key={idx} 
-                className={`cursor-pointer transition-all hover:border-primary shadow-sm ${activeWord?.ngaju === item.ngaju ? 'ring-2 ring-primary border-primary' : ''}`}
-                onClick={() => {
-                  setActiveWord(item);
-                  setExamples([]);
-                }}
+        <div className="lg:col-span-2 space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {dbLoading ? (
+              <div className="col-span-full py-20 text-center">
+                <Loader2 className="animate-spin inline-block h-8 w-8 text-primary" />
+                <p className="mt-2 text-muted-foreground">Memuat database...</p>
+              </div>
+            ) : filteredVocab.length === 0 ? (
+              <div className="col-span-full py-20 text-center text-muted-foreground italic bg-muted/20 rounded-3xl">
+                Kosakata tidak ditemukan.
+              </div>
+            ) : (
+              visibleVocab.map((item, idx) => (
+                <Card 
+                  key={`${item.ngaju}-${idx}`} 
+                  className={`cursor-pointer transition-all hover:border-primary shadow-sm ${activeWord?.ngaju === item.ngaju ? 'ring-2 ring-primary border-primary' : ''}`}
+                  onClick={() => {
+                    setActiveWord(item);
+                    setExamples([]);
+                  }}
+                >
+                  <CardContent className="p-5 flex items-center justify-between">
+                    <div>
+                      <h3 className="text-lg font-bold text-primary">{item.ngaju}</h3>
+                      <p className="text-sm text-muted-foreground">{item.indonesian}</p>
+                      <Badge variant="secondary" className="mt-2 text-[10px] uppercase font-bold">{item.category}</Badge>
+                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="rounded-full hover:bg-primary/10 hover:text-primary"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        playAudio(item);
+                      }}
+                    >
+                      <Volume2 className="w-5 h-5" />
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+
+          {filteredVocab.length > visibleCount && (
+            <div className="flex justify-center pt-4">
+              <Button 
+                variant="outline" 
+                onClick={() => setVisibleCount(prev => prev + ITEMS_PER_PAGE)}
+                className="gap-2 rounded-full border-primary text-primary hover:bg-primary/5 px-8"
               >
-                <CardContent className="p-5 flex items-center justify-between">
-                  <div>
-                    <h3 className="text-lg font-bold text-primary">{item.ngaju}</h3>
-                    <p className="text-sm text-muted-foreground">{item.indonesian}</p>
-                    <Badge variant="secondary" className="mt-2 text-[10px] uppercase font-bold">{item.category}</Badge>
-                  </div>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="rounded-full hover:bg-primary/10 hover:text-primary"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      playAudio(item);
-                    }}
-                  >
-                    <Volume2 className="w-5 h-5" />
-                  </Button>
-                </CardContent>
-              </Card>
-            ))
+                <ChevronDown className="w-4 h-4" />
+                Tampilkan Lebih Banyak ({filteredVocab.length - visibleCount} lagi)
+              </Button>
+            </div>
           )}
         </div>
 
