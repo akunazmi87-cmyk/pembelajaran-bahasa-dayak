@@ -19,7 +19,8 @@ import {
   FileArchive,
   AlertTriangle,
   X,
-  Info
+  Info,
+  GraduationCap
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,7 +39,7 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import * as XLSX from "xlsx";
 import JSZip from "jszip";
 
-export default function AdminDashboardPage() {
+export default function GuruDashboardPage() {
   const [mounted, setMounted] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -158,9 +159,9 @@ export default function AdminDashboardPage() {
         })).filter(item => item.indonesian && item.ngaju);
 
         setPreviewData(normalizedData);
-        toast({ title: "File terbaca!", description: `Ditemukan ${normalizedData.length} kosakata dalam file.` });
+        toast({ title: "File terbaca!", description: `Ditemukan ${normalizedData.length} kosakata.` });
       } catch (error: any) {
-        toast({ variant: "destructive", title: "Gagal membaca file", description: "Pastikan format file benar." });
+        toast({ variant: "destructive", title: "Gagal membaca file" });
       } finally {
         setIsProcessingFile(false);
       }
@@ -190,9 +191,7 @@ export default function AdminDashboardPage() {
 
         chunk.forEach(item => {
           const key = item.ngaju?.toLowerCase().trim();
-          if (!key) return;
-
-          if (processedKeysInFile.has(key)) return;
+          if (!key || processedKeysInFile.has(key)) return;
           processedKeysInFile.add(key);
 
           if (existingMap.has(key)) {
@@ -220,12 +219,11 @@ export default function AdminDashboardPage() {
 
       toast({ 
         title: "Impor Berhasil!", 
-        description: `Total ${processedCount} data telah diproses tanpa menghapus data lama.`,
+        description: `Total ${processedCount} data telah diproses.`,
       });
       setPreviewData([]);
       if (fileInputRef.current) fileInputRef.current.value = "";
     } catch (error) {
-      console.error("Import error:", error);
       toast({ variant: "destructive", title: "Terjadi kesalahan saat impor" });
     } finally {
       setIsSaving(false);
@@ -247,7 +245,7 @@ export default function AdminDashboardPage() {
       );
       
       if (audioFiles.length === 0) {
-        toast({ variant: "destructive", title: "ZIP Kosong", description: "Tidak ditemukan file audio (.mp3/.wav)." });
+        toast({ variant: "destructive", title: "ZIP Kosong", description: "Tidak ditemukan audio (.mp3/.wav)." });
         setIsSaving(false);
         return;
       }
@@ -285,12 +283,8 @@ export default function AdminDashboardPage() {
         setImportProgress(Math.round((processed / total) * 100));
       }
 
-      toast({ 
-        title: "Audio ZIP Selesai!", 
-        description: `${processed} file audio telah dihubungkan otomatis.`,
-      });
+      toast({ title: "Audio ZIP Selesai!", description: `${processed} file audio terhubung.` });
     } catch (error) {
-      console.error("ZIP processing error:", error);
       toast({ variant: "destructive", title: "Gagal memproses file ZIP" });
     } finally {
       setIsSaving(false);
@@ -317,21 +311,26 @@ export default function AdminDashboardPage() {
   if (!mounted) return null;
 
   return (
-    <div className="container mx-auto px-4 py-12 max-w-6xl" suppressHydrationWarning>
+    <div className="container mx-auto px-4 py-12 max-w-6xl">
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
-        <div>
-          <h1 className="text-4xl font-headline font-bold mb-2">Dashboard Admin</h1>
-          <p className="text-muted-foreground">Kelola database kosakata dengan aman dan cepat.</p>
+        <div className="flex items-center gap-4">
+          <div className="bg-primary/10 p-3 rounded-2xl">
+            <GraduationCap className="w-8 h-8 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-4xl font-headline font-bold mb-1 text-primary">Ruang Guru</h1>
+            <p className="text-muted-foreground">Pusat pengelolaan materi dan kosakata Dayak Ngaju.</p>
+          </div>
         </div>
-        <Button variant="ghost" size="sm" onClick={handleLogout} className="text-destructive font-bold">
-          <LogOut className="mr-2 h-4 w-4" /> Logout Admin
+        <Button variant="ghost" size="sm" onClick={handleLogout} className="text-destructive font-bold hover:bg-destructive/10">
+          <LogOut className="mr-2 h-4 w-4" /> Keluar Sesi Guru
         </Button>
       </header>
 
       <Tabs defaultValue="manage" className="space-y-8">
         <TabsList className="bg-muted p-1 rounded-xl">
-          <TabsTrigger value="manage" className="rounded-lg">Kelola Satuan</TabsTrigger>
-          <TabsTrigger value="import" className="rounded-lg">Impor Massal</TabsTrigger>
+          <TabsTrigger value="manage" className="rounded-lg">Kelola Kosakata</TabsTrigger>
+          <TabsTrigger value="import" className="rounded-lg">Impor & Audio Massal</TabsTrigger>
         </TabsList>
 
         <TabsContent value="manage">
@@ -340,14 +339,14 @@ export default function AdminDashboardPage() {
               <div className="relative flex-1 w-full">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <Input 
-                  placeholder="Cari kata atau kategori..." 
-                  className="pl-10 bg-white"
+                  placeholder="Cari kata..." 
+                  className="pl-10 bg-white rounded-full border-primary/20"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
-              <Button onClick={() => handleOpenDialog()} className="rounded-full shadow-lg">
-                <Plus className="mr-2 h-4 w-4" /> Tambah Kosakata
+              <Button onClick={() => handleOpenDialog()} className="rounded-full shadow-lg gap-2">
+                <Plus className="h-4 w-4" /> Tambah Satuan
               </Button>
             </div>
             <div className="overflow-x-auto max-h-[600px]">
@@ -371,7 +370,7 @@ export default function AdminDashboardPage() {
                   ) : filteredVocab.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={5} className="h-48 text-center text-muted-foreground italic">
-                        Belum ada data.
+                        Belum ada data ditemukan.
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -386,7 +385,7 @@ export default function AdminDashboardPage() {
                           {word.audioUrl ? (
                             <Badge variant="secondary" className="bg-green-100 text-green-700">Tersedia</Badge>
                           ) : (
-                            <span className="text-xs text-muted-foreground">Kosong</span>
+                            <span className="text-xs text-muted-foreground">Belum ada</span>
                           )}
                         </TableCell>
                         <TableCell className="text-right space-x-2">
@@ -408,47 +407,47 @@ export default function AdminDashboardPage() {
 
         <TabsContent value="import">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <Card className="shadow-lg border-none">
+            <Card className="shadow-lg border-none hover:shadow-xl transition-shadow">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <FileSpreadsheet className="w-5 h-5 text-green-600" />
-                  Impor Kosakata (Excel/CSV)
+                  Impor Spreadsheet
                 </CardTitle>
-                <CardDescription>Tambah atau perbarui ribuan data sekaligus. Data lama tetap aman.</CardDescription>
+                <CardDescription>Unggah file Excel atau CSV untuk menambah ribuan kata sekaligus.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex flex-col gap-4 p-6 border-2 border-dashed rounded-2xl bg-muted/10 items-center text-center">
                   <input type="file" ref={fileInputRef} className="hidden" accept=".xlsx,.xls,.csv" onChange={handleFileImport} />
-                  <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSaving || isProcessingFile}>
-                    {isProcessingFile ? <Loader2 className="animate-spin mr-2" /> : null}
+                  <Button variant="outline" className="border-primary/40" onClick={() => fileInputRef.current?.click()} disabled={isSaving || isProcessingFile}>
+                    {isProcessingFile ? <Loader2 className="animate-spin mr-2" /> : <FileUp className="mr-2 h-4 w-4" />}
                     Pilih File Spreadsheet
                   </Button>
                 </div>
                 <Button variant="ghost" className="w-full gap-2 text-primary" onClick={downloadTemplate}>
-                  <Download className="w-4 h-4" /> Download Template Excel
+                  <Download className="w-4 h-4" /> Download Template Guru
                 </Button>
               </CardContent>
             </Card>
 
-            <Card className="shadow-lg border-none">
+            <Card className="shadow-lg border-none hover:shadow-xl transition-shadow">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <FileArchive className="w-5 h-5 text-blue-600" />
-                  Upload Audio Massal (ZIP)
+                  Upload Audio (ZIP)
                 </CardTitle>
-                <CardDescription>Unggah ZIP audio untuk dihubungkan otomatis ke kosakata.</CardDescription>
+                <CardDescription>Sistem akan mencocokkan nama file .mp3 dengan kosakata otomatis.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex flex-col gap-4 p-6 border-2 border-dashed rounded-2xl bg-muted/10 items-center text-center">
                   <input type="file" ref={zipInputRef} className="hidden" accept=".zip" onChange={handleZipAudioUpload} />
-                  <Button variant="outline" onClick={() => zipInputRef.current?.click()} disabled={isSaving}>
-                    Pilih File ZIP Audio
+                  <Button variant="outline" className="border-primary/40" onClick={() => zipInputRef.current?.click()} disabled={isSaving}>
+                    Pilih File ZIP Suara
                   </Button>
                 </div>
                 {isSaving && importProgress > 0 && (
                   <div className="space-y-2">
                     <Progress value={importProgress} className="h-2" />
-                    <p className="text-xs text-center font-bold text-primary">Proses: {importProgress}%</p>
+                    <p className="text-xs text-center font-bold text-primary">Memproses: {importProgress}%</p>
                   </div>
                 )}
               </CardContent>
@@ -456,27 +455,26 @@ export default function AdminDashboardPage() {
           </div>
 
           {previewData.length > 0 && (
-            <Card className="mt-8 shadow-2xl border-none">
-              <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <Card className="mt-8 shadow-2xl border-none animate-in fade-in slide-in-from-bottom-4">
+              <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b">
                 <div>
-                  <CardTitle>Pratinjau Impor</CardTitle>
-                  <CardDescription>Ditemukan {previewData.length} baris data.</CardDescription>
+                  <CardTitle>Pratinjau Data Impor</CardTitle>
+                  <CardDescription>Ditemukan {previewData.length} baris data yang siap diimpor.</CardDescription>
                 </div>
                 <div className="flex gap-2 w-full md:w-auto">
                   <Button variant="ghost" onClick={() => setPreviewData([])} disabled={isSaving}>
                     <X className="w-4 h-4 mr-2" /> Batal
                   </Button>
-                  <Button onClick={executeBulkImport} disabled={isSaving}>
+                  <Button onClick={executeBulkImport} disabled={isSaving} className="shadow-lg px-8">
                     {isSaving ? <Loader2 className="animate-spin mr-2" /> : <CheckCircle2 className="mr-2" />}
-                    Impor {previewData.length} Data
+                    Impor Sekarang
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent>
-                {isSaving && <Progress value={importProgress} className="h-2 mb-4" />}
-                <div className="max-h-[400px] overflow-auto border rounded-lg">
+              <CardContent className="p-0">
+                <div className="max-h-[400px] overflow-auto">
                   <Table>
-                    <TableHeader className="bg-muted sticky top-0 z-10">
+                    <TableHeader className="bg-muted/50 sticky top-0 z-10">
                       <TableRow>
                         <TableHead>Indonesia</TableHead>
                         <TableHead>Dayak Ngaju</TableHead>
@@ -495,9 +493,9 @@ export default function AdminDashboardPage() {
                   </Table>
                 </div>
                 {previewData.length > 100 && (
-                  <div className="mt-4 flex items-center gap-2 p-3 bg-blue-50 text-blue-700 rounded-lg text-sm">
+                  <div className="p-4 flex items-center gap-2 bg-primary/5 text-primary text-sm font-medium">
                     <Info className="w-4 h-4" />
-                    Pratinjau dibatasi 100 baris pertama untuk performa. Total {previewData.length} data akan tetap diimpor.
+                    Hanya menampilkan 100 data pertama. Total {previewData.length} data akan tetap diproses.
                   </div>
                 )}
               </CardContent>
@@ -509,11 +507,11 @@ export default function AdminDashboardPage() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>{editingWord ? "Edit Kosakata" : "Tambah Kosakata"}</DialogTitle>
+            <DialogTitle>{editingWord ? "Edit Kosakata" : "Tambah Baru"}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="indonesian">Indonesia</Label>
+              <Label htmlFor="indonesian">Bahasa Indonesia</Label>
               <Input 
                 id="indonesian" 
                 value={formData.indonesian} 
@@ -521,7 +519,7 @@ export default function AdminDashboardPage() {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="ngaju">Dayak Ngaju</Label>
+              <Label htmlFor="ngaju">Bahasa Dayak Ngaju</Label>
               <Input 
                 id="ngaju" 
                 value={formData.ngaju} 
@@ -545,18 +543,19 @@ export default function AdminDashboardPage() {
               </Select>
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="audio">URL Audio</Label>
+              <Label htmlFor="audio">Link Audio (Opsional)</Label>
               <Input 
                 id="audio" 
                 value={formData.audioUrl} 
+                placeholder="https://..."
                 onChange={(e) => setFormData({...formData, audioUrl: e.target.value})}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button onClick={handleSave} disabled={isSaving}>
+            <Button onClick={handleSave} disabled={isSaving} className="w-full">
               {isSaving && <Loader2 className="animate-spin mr-2 h-4 w-4" />}
-              Simpan
+              Simpan Data
             </Button>
           </DialogFooter>
         </DialogContent>

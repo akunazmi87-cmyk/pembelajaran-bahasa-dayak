@@ -4,7 +4,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Book, MessageSquare, Trophy, Home, Languages, Gamepad2, Settings } from "lucide-react";
+import { Book, MessageSquare, Trophy, Home, Languages, Gamepad2, GraduationCap } from "lucide-react";
 
 const navItems = [
   { name: "Beranda", href: "/", icon: Home },
@@ -46,10 +46,16 @@ export function Navbar() {
           ))}
           <Link 
             href="/admin/login" 
-            className="p-2 text-muted-foreground hover:text-primary transition-colors"
-            title="Kelola Database (Admin)"
+            className={cn(
+              "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all",
+              pathname.startsWith("/admin") 
+                ? "bg-primary text-primary-foreground" 
+                : "bg-primary/10 text-primary hover:bg-primary/20"
+            )}
+            title="Akses Guru"
           >
-            <Settings className="w-5 h-5" />
+            <GraduationCap className="w-4 h-4" />
+            Guru
           </Link>
         </div>
 
@@ -74,8 +80,8 @@ export function Navbar() {
               pathname.startsWith("/admin") ? "text-primary" : "text-muted-foreground"
             )}
           >
-            <Settings className="w-5 h-5" />
-            Admin
+            <GraduationCap className="w-5 h-5" />
+            Guru
           </Link>
         </div>
       </div>
