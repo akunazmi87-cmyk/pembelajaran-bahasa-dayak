@@ -4,7 +4,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Book, MessageSquare, Trophy, Home, Languages, Gamepad2, GraduationCap } from "lucide-react";
+import { Book, MessageSquare, Trophy, Home, Languages, Gamepad2, GraduationCap, ShieldCheck } from "lucide-react";
 
 const navItems = [
   { name: "Beranda", href: "/", icon: Home },
@@ -30,13 +30,57 @@ export function Navbar() {
           </span>
         </Link>
 
-        <div className="hidden md:flex items-center gap-6">
+        <div className="hidden md:flex items-center gap-4">
           {navItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary",
+                "flex items-center gap-1.5 text-xs font-medium transition-colors hover:text-primary",
+                pathname === item.href ? "text-primary" : "text-muted-foreground"
+              )}
+            >
+              <item.icon className="w-3.5 h-3.5" />
+              {item.name}
+            </Link>
+          ))}
+          <div className="flex gap-2 ml-4">
+            <Link 
+              href="/guru/login" 
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold transition-all",
+                pathname.startsWith("/guru") 
+                  ? "bg-primary text-primary-foreground" 
+                  : "bg-primary/10 text-primary hover:bg-primary/20"
+              )}
+              title="Akses Guru"
+            >
+              <GraduationCap className="w-3 h-3" />
+              Guru
+            </Link>
+            <Link 
+              href="/admin/login" 
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold transition-all",
+                pathname.startsWith("/admin") 
+                  ? "bg-primary text-primary-foreground" 
+                  : "bg-accent/10 text-accent hover:bg-accent/20"
+              )}
+              title="Akses Admin"
+            >
+              <ShieldCheck className="w-3 h-3" />
+              Admin
+            </Link>
+          </div>
+        </div>
+
+        <div className="md:hidden flex items-center gap-1 fixed bottom-0 left-0 right-0 bg-background border-t p-2 justify-around shadow-lg z-50 overflow-x-auto no-scrollbar">
+           {navItems.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "flex flex-col items-center gap-1 text-[9px] font-medium transition-colors min-w-[45px]",
                 pathname === item.href ? "text-primary" : "text-muted-foreground"
               )}
             >
@@ -44,44 +88,25 @@ export function Navbar() {
               {item.name}
             </Link>
           ))}
-          <Link 
-            href="/admin/login" 
+          <Link
+            href="/guru/login"
             className={cn(
-              "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all",
-              pathname.startsWith("/admin") 
-                ? "bg-primary text-primary-foreground" 
-                : "bg-primary/10 text-primary hover:bg-primary/20"
+              "flex flex-col items-center gap-1 text-[9px] font-medium transition-colors min-w-[45px]",
+              pathname.startsWith("/guru") ? "text-primary" : "text-muted-foreground"
             )}
-            title="Akses Guru"
           >
             <GraduationCap className="w-4 h-4" />
             Guru
           </Link>
-        </div>
-
-        <div className="md:hidden flex items-center gap-2 fixed bottom-0 left-0 right-0 bg-background border-t p-2 justify-around shadow-lg z-50 overflow-x-auto no-scrollbar">
-           {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex flex-col items-center gap-1 text-[10px] font-medium transition-colors min-w-[55px]",
-                pathname === item.href ? "text-primary" : "text-muted-foreground"
-              )}
-            >
-              <item.icon className="w-5 h-5" />
-              {item.name}
-            </Link>
-          ))}
           <Link
             href="/admin/login"
             className={cn(
-              "flex flex-col items-center gap-1 text-[10px] font-medium transition-colors min-w-[55px]",
+              "flex flex-col items-center gap-1 text-[9px] font-medium transition-colors min-w-[45px]",
               pathname.startsWith("/admin") ? "text-primary" : "text-muted-foreground"
             )}
           >
-            <GraduationCap className="w-5 h-5" />
-            Guru
+            <ShieldCheck className="w-4 h-4" />
+            Admin
           </Link>
         </div>
       </div>

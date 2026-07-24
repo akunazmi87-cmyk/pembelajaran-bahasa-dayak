@@ -20,7 +20,7 @@ import {
   AlertTriangle,
   X,
   Info,
-  ShieldCheck,
+  GraduationCap,
   ChevronDown
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -42,7 +42,7 @@ import JSZip from "jszip";
 
 const ITEMS_PER_PAGE = 20;
 
-export default function AdminDashboardPage() {
+export default function GuruDashboardPage() {
   const [mounted, setMounted] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -67,9 +67,9 @@ export default function AdminDashboardPage() {
   const { data: vocabList, loading } = useCollection<any>(vocabQuery);
 
   useEffect(() => {
-    const isAuth = localStorage.getItem("admin_auth");
+    const isAuth = localStorage.getItem("guru_auth");
     if (!isAuth) {
-      router.push("/admin/login");
+      router.push("/guru/login");
     } else {
       setMounted(true);
     }
@@ -266,11 +266,11 @@ export default function AdminDashboardPage() {
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Kosakata");
-    XLSX.writeFile(wb, "template_admin_kosakata.xlsx");
+    XLSX.writeFile(wb, "template_guru_kosakata.xlsx");
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("admin_auth");
+    localStorage.removeItem("guru_auth");
     router.push("/");
   };
 
@@ -281,22 +281,22 @@ export default function AdminDashboardPage() {
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
         <div className="flex items-center gap-4">
           <div className="bg-primary/10 p-3 rounded-2xl">
-            <ShieldCheck className="w-8 h-8 text-primary" />
+            <GraduationCap className="w-8 h-8 text-primary" />
           </div>
           <div>
-            <h1 className="text-4xl font-headline font-bold mb-1 text-primary">Admin Dashboard</h1>
-            <p className="text-muted-foreground">Pusat kontrol database Dayak Ngaju.</p>
+            <h1 className="text-4xl font-headline font-bold mb-1 text-primary">Ruang Guru</h1>
+            <p className="text-muted-foreground">Pusat pengelolaan materi Dayak Ngaju.</p>
           </div>
         </div>
         <Button variant="ghost" onClick={handleLogout} className="text-destructive font-bold">
-          <LogOut className="mr-2 h-4 w-4" /> Keluar Sesi Admin
+          <LogOut className="mr-2 h-4 w-4" /> Keluar Sesi Guru
         </Button>
       </header>
 
       <Tabs defaultValue="manage" className="space-y-8">
         <TabsList className="bg-muted p-1 rounded-xl">
-          <TabsTrigger value="manage" className="rounded-lg">Manajemen Database</TabsTrigger>
-          <TabsTrigger value="import" className="rounded-lg">Impor Massal</TabsTrigger>
+          <TabsTrigger value="manage" className="rounded-lg">Manajemen Kosakata</TabsTrigger>
+          <TabsTrigger value="import" className="rounded-lg">Impor & Audio</TabsTrigger>
         </TabsList>
 
         <TabsContent value="manage">
@@ -305,7 +305,7 @@ export default function AdminDashboardPage() {
               <div className="relative flex-1 w-full">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <Input 
-                  placeholder="Cari kata di database..." 
+                  placeholder="Cari kosakata..." 
                   className="pl-10 rounded-full"
                   value={searchQuery}
                   onChange={(e) => {
@@ -315,7 +315,7 @@ export default function AdminDashboardPage() {
                 />
               </div>
               <Button onClick={() => handleOpenDialog()} className="rounded-full shadow-lg gap-2">
-                <Plus className="h-4 w-4" /> Tambah Satuan
+                <Plus className="h-4 w-4" /> Tambah Kosakata
               </Button>
             </div>
             <div className="overflow-x-auto">
@@ -365,20 +365,20 @@ export default function AdminDashboardPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <Card className="shadow-lg">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2"><FileSpreadsheet className="w-5 h-5 text-green-600" /> Excel / CSV</CardTitle>
-                <CardDescription>Tambah ribuan data sekaligus.</CardDescription>
+                <CardTitle className="flex items-center gap-2"><FileSpreadsheet className="w-5 h-5 text-green-600" /> Spreadsheet</CardTitle>
+                <CardDescription>Tambah kosakata dalam jumlah besar.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <input type="file" ref={fileInputRef} className="hidden" accept=".xlsx,.xls,.csv" onChange={handleFileImport} />
-                <Button variant="outline" className="w-full" onClick={() => fileInputRef.current?.click()}>Pilih Spreadsheet</Button>
-                <Button variant="ghost" className="w-full text-xs" onClick={downloadTemplate}><Download className="w-3 h-3 mr-2" /> Download Template</Button>
+                <Button variant="outline" className="w-full" onClick={() => fileInputRef.current?.click()}>Pilih File Spreadsheet</Button>
+                <Button variant="ghost" className="w-full text-xs" onClick={downloadTemplate}><Download className="w-3 h-3 mr-2" /> Download Template Guru</Button>
               </CardContent>
             </Card>
 
             <Card className="shadow-lg">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2"><FileArchive className="w-5 h-5 text-blue-600" /> Audio ZIP</CardTitle>
-                <CardDescription>Sinkronisasi file suara masal.</CardDescription>
+                <CardTitle className="flex items-center gap-2"><FileArchive className="w-5 h-5 text-blue-600" /> ZIP Suara</CardTitle>
+                <CardDescription>Upload audio massal untuk kosakata.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <input type="file" ref={zipInputRef} className="hidden" accept=".zip" onChange={handleZipAudioUpload} />
@@ -392,8 +392,8 @@ export default function AdminDashboardPage() {
             <Card className="mt-8 shadow-2xl overflow-hidden">
               <CardHeader className="flex flex-row items-center justify-between border-b">
                 <div>
-                  <CardTitle>Pratinjau Impor</CardTitle>
-                  <CardDescription>{previewData.length} data siap diimpor.</CardDescription>
+                  <CardTitle>Pratinjau Data</CardTitle>
+                  <CardDescription>{previewData.length} baris siap diimpor.</CardDescription>
                 </div>
                 <div className="flex gap-2">
                   <Button variant="ghost" onClick={() => setPreviewData([])} disabled={isSaving}>Batal</Button>
