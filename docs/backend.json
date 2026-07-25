@@ -13,51 +13,62 @@
       },
       "required": ["indonesian", "ngaju", "category"]
     },
-    "TranslationHistory": {
-      "title": "Translation History",
-      "description": "Stores user translation history for Dayak Ngaju",
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Student profile data including gamification stats",
       "type": "object",
       "properties": {
-        "indonesian": { "type": "string" },
-        "ngaju": { "type": "string" },
-        "source": { "type": "string", "enum": ["database", "ai"] },
-        "timestamp": { "type": "string", "format": "date-time" }
+        "name": { "type": "string" },
+        "username": { "type": "string" },
+        "email": { "type": "string" },
+        "school": { "type": "string" },
+        "class": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "currentStreak": { "type": "number" },
+        "longestStreak": { "type": "number" },
+        "totalStudyDays": { "type": "number" },
+        "totalVocabulary": { "type": "number" },
+        "totalGames": { "type": "number" },
+        "totalExercises": { "type": "number" },
+        "xp": { "type": "number" },
+        "level": { "type": "number" },
+        "badges": { "type": "array", "items": { "type": "string" } },
+        "lastStudyDate": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["indonesian", "ngaju", "source", "timestamp"]
+      "required": ["name", "username", "email", "xp", "level", "currentStreak"]
     },
-    "GameProfile": {
-      "title": "Game Profile",
-      "description": "Stores user game stats for Word Scramble",
+    "StudyHistory": {
+      "title": "Study History",
+      "description": "Records of user learning activities",
       "type": "object",
       "properties": {
-        "displayName": { "type": "string" },
-        "totalPoints": { "type": "number" },
-        "level": { "type": "string" },
-        "highScore": { "type": "number" },
-        "badges": { 
-          "type": "array",
-          "items": { "type": "string" }
-        },
-        "updatedAt": { "type": "string", "format": "date-time" }
+        "uid": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "activity": { "type": "string" },
+        "duration": { "type": "number" },
+        "score": { "type": "number" },
+        "vocabularyLearned": { "type": "number" },
+        "xpEarned": { "type": "number" }
       },
-      "required": ["displayName", "totalPoints", "level", "highScore", "badges"]
+      "required": ["uid", "date", "activity", "xpEarned"]
     }
   },
   "auth": {
-    "providers": ["google.com"]
+    "providers": ["google.com", "password"]
   },
   "firestore": {
     "/vocabulary/{wordId}": {
-      "schema": "#/entities/Vocabulary",
+      "schema": "#/backend/entities/Vocabulary",
       "description": "Master vocabulary collection"
     },
-    "/translation_history/{historyId}": {
-      "schema": "#/entities/TranslationHistory",
-      "description": "User translation history"
+    "/users/{userId}": {
+      "schema": "#/backend/entities/UserProfile",
+      "description": "Student profile data"
     },
-    "/game_profiles/{userId}": {
-      "schema": "#/entities/GameProfile",
-      "description": "User game statistics and achievements"
+    "/study_history/{historyId}": {
+      "schema": "#/backend/entities/StudyHistory",
+      "description": "User activity logs"
     }
   }
 }
