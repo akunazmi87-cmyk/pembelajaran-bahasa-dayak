@@ -1,33 +1,43 @@
+
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useUser, useAuth } from '@/firebase';
-import { signOut } from 'firebase/auth';
+import { useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { Book, MessageSquare, Trophy, Languages, Sparkles, Gamepad2, Loader2, LogOut } from 'lucide-react';
+import { Book, MessageSquare, Languages, Sparkles, Gamepad2, Users, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useFirestore, useDoc } from '@/firebase';
+import { doc, updateDoc, increment, setDoc, getDoc } from 'firebase/firestore';
 
 export default function Home() {
-  const { user, loading } = useUser();
-  const router = useRouter();
-  const auth = useAuth();
+  const db = useFirestore();
+  const statsRef = useMemo(() => doc(db, 'stats', 'website'), [db]);
+  const { data: stats } = useDoc<any>(statsRef);
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.replace('/login');
-    }
-  }, [user, loading, router]);
+    const checkVisitor = async () => {
+      const today = new Date().toISOString().split('T')[0];
+      const lastVisit = localStorage.getItem('last_visit_date');
 
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      router.replace('/login');
-    } catch (error) {
-      console.error("Logout error:", error);
-    }
-  };
+      if (lastVisit !== today) {
+        try {
+          const docSnap = await getDoc(statsRef);
+          if (!docSnap.exists()) {
+            await setDoc(statsRef, { totalVisitors: 1 });
+          } else {
+            await updateDoc(statsRef, {
+              totalVisitors: increment(1)
+            });
+          }
+          localStorage.setItem('last_visit_date', today);
+        } catch (error) {
+          console.error("Error updating visitor count:", error);
+        }
+      }
+    };
+
+    checkVisitor();
+  }, [statsRef]);
 
   const modules = [
     {
@@ -64,23 +74,12 @@ export default function Home() {
     }
   ];
 
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen gap-4">
-        <Loader2 className="w-10 h-10 animate-spin text-primary" />
-        <p className="text-muted-foreground font-medium">Memverifikasi sesi...</p>
-      </div>
-    );
-  }
-
-  if (!user) return null;
-
   return (
-    <div className="container mx-auto px-4 py-12">
-      <section className="text-center mb-16 space-y-6">
+    <div className="container mx-auto px-4 py-12 flex flex-col gap-16">
+      <section className="text-center space-y-6">
         <div className="inline-flex items-center gap-2 bg-primary/5 px-4 py-2 rounded-full text-primary font-bold text-sm mb-4">
           <Sparkles className="w-4 h-4" />
-          Selamat Datang, {user.displayName || 'Murid'}!
+          Media Belajar Interaktif
         </div>
         <h1 className="text-4xl md:text-7xl font-headline font-bold text-foreground leading-tight">
           Lestarikan Bahasa<br />
@@ -88,7 +87,7 @@ export default function Home() {
         </h1>
         <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto font-medium leading-relaxed">
           Habaring Hurung - Bergotong Royong Melestarikan Budaya.
-          Media belajar interaktif untuk masa depan.
+          Platform pembelajaran digital untuk generasi muda Kalimantan Tengah.
         </p>
         
         <div className="flex justify-center gap-4 pt-4">
@@ -98,15 +97,15 @@ export default function Home() {
             size="lg" 
             className="rounded-full h-14 px-8 gap-3 shadow-xl font-bold"
           >
-            <Link href="/vocabulary">Mulai Belajar</Link>
+            <Link href="/vocabulary">Mulai Belajar Sekarang</Link>
           </Button>
           <Button 
-            onClick={handleLogout}
-            variant="ghost" 
+            asChild
+            variant="outline" 
             size="lg" 
-            className="rounded-full h-14 px-8 gap-3 text-destructive hover:bg-destructive/10 font-bold"
+            className="rounded-full h-14 px-8 gap-3 font-bold border-primary text-primary hover:bg-primary/5"
           >
-            <LogOut className="w-5 h-5" /> Keluar
+            <Link href="/challenge">Uji Kemampuan</Link>
           </Button>
         </div>
       </section>
@@ -132,6 +131,26 @@ export default function Home() {
             </Card>
           </Link>
         ))}
+      </div>
+
+      {/* Visitor Counter Card */}
+      <div className="max-w-sm mx-auto w-full">
+        <Card className="bg-card border-2 border-primary/10 shadow-xl text-center overflow-hidden">
+          <div className="h-1.5 bg-primary/20 w-full" />
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-bold text-muted-foreground uppercase tracking-widest flex items-center justify-center gap-2">
+              <Users className="w-4 h-4 text-primary" /> Total Pengunjung
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4 pb-6">
+            <div className="text-4xl font-headline font-bold text-primary">
+              {stats?.totalVisitors?.toLocaleString('id-ID') || '0'}
+            </div>
+            <p className="text-xs text-muted-foreground font-medium leading-relaxed px-4">
+              Terima kasih telah mengunjungi media pembelajaran Bahasa Dayak Ngaju.
+            </p>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

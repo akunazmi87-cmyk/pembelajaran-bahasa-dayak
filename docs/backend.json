@@ -13,45 +13,14 @@
       },
       "required": ["indonesian", "ngaju", "category"]
     },
-    "UserProfile": {
-      "title": "User Profile",
-      "description": "Student profile data including gamification stats",
+    "WebsiteStats": {
+      "title": "Website Stats",
+      "description": "Public statistics for the website",
       "type": "object",
       "properties": {
-        "name": { "type": "string" },
-        "username": { "type": "string" },
-        "email": { "type": "string" },
-        "school": { "type": "string" },
-        "class": { "type": "string" },
-        "photoURL": { "type": "string" },
-        "currentStreak": { "type": "number" },
-        "longestStreak": { "type": "number" },
-        "totalStudyDays": { "type": "number" },
-        "totalVocabulary": { "type": "number" },
-        "totalGames": { "type": "number" },
-        "totalExercises": { "type": "number" },
-        "xp": { "type": "number" },
-        "level": { "type": "number" },
-        "badges": { "type": "array", "items": { "type": "string" } },
-        "lastStudyDate": { "type": "string", "format": "date-time" },
-        "createdAt": { "type": "string", "format": "date-time" }
+        "totalVisitors": { "type": "number" }
       },
-      "required": ["name", "username", "email", "xp", "level", "currentStreak"]
-    },
-    "StudyHistory": {
-      "title": "Study History",
-      "description": "Records of user learning activities",
-      "type": "object",
-      "properties": {
-        "uid": { "type": "string" },
-        "date": { "type": "string", "format": "date-time" },
-        "activity": { "type": "string" },
-        "duration": { "type": "number" },
-        "score": { "type": "number" },
-        "vocabularyLearned": { "type": "number" },
-        "xpEarned": { "type": "number" }
-      },
-      "required": ["uid", "date", "activity", "xpEarned"]
+      "required": ["totalVisitors"]
     }
   },
   "auth": {
@@ -62,13 +31,9 @@
       "schema": "#/backend/entities/Vocabulary",
       "description": "Master vocabulary collection"
     },
-    "/users/{userId}": {
-      "schema": "#/backend/entities/UserProfile",
-      "description": "Student profile data"
-    },
-    "/study_history/{historyId}": {
-      "schema": "#/backend/entities/StudyHistory",
-      "description": "User activity logs"
+    "/stats/{statId}": {
+      "schema": "#/backend/entities/WebsiteStats",
+      "description": "Public statistics collection"
     }
   }
 }
