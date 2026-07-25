@@ -1,13 +1,10 @@
 
 'use client';
 
-import Link from "next/image";
 import NextLink from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Book, MessageSquare, Trophy, Home, Languages, Gamepad2, GraduationCap, ShieldCheck } from "lucide-react";
-import { PlaceHolderImages } from "@/lib/placeholder-images";
 
 const navItems = [
   { name: "Beranda", href: "/", icon: Home },
@@ -20,23 +17,13 @@ const navItems = [
 
 export function Navbar() {
   const pathname = usePathname();
-  const logo = PlaceHolderImages.find(img => img.id === 'logo-enggang-kalteng');
 
   return (
     <nav className="sticky top-0 z-50 w-full glass-morphism border-b border-border">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <NextLink href="/" className="flex items-center gap-3 group">
-          <div className="relative w-12 h-12 transition-transform group-hover:scale-110">
-            {logo && (
-              <Image 
-                src={logo.imageUrl} 
-                alt={logo.description} 
-                width={48} 
-                height={48} 
-                className="object-contain"
-                data-ai-hint={logo.imageHint}
-              />
-            )}
+          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-bold transition-transform group-hover:rotate-12">
+            DN
           </div>
           <span className="font-headline font-bold text-xl hidden sm:inline-block">
             Pelestarian <span className="text-primary">Dayak Ngaju</span>
