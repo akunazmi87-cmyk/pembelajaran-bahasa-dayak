@@ -1,10 +1,10 @@
 {
   "placeholderImages": [
     {
-      "id": "logo-habaring-hurung",
-      "description": "Logo Habaring Hurung Kotawaringin Timur",
-      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/b/b3/Logo_Kotawaringin_Timur.png",
-      "imageHint": "logo kotawaringin timur"
+      "id": "logo-enggang-kalteng",
+      "description": "Logo Budaya Dayak Kalimantan Tengah dengan Burung Enggang dan Gendang",
+      "imageUrl": "https://picsum.photos/seed/kalteng-logo/400/400",
+      "imageHint": "kalteng hornbill drum"
     },
     {
       "id": "budaya-dayak",

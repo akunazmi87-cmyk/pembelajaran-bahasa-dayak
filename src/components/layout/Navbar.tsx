@@ -20,25 +20,25 @@ const navItems = [
 
 export function Navbar() {
   const pathname = usePathname();
-  const logo = PlaceHolderImages.find(img => img.id === 'logo-habaring-hurung');
+  const logo = PlaceHolderImages.find(img => img.id === 'logo-enggang-kalteng');
 
   return (
     <nav className="sticky top-0 z-50 w-full glass-morphism border-b border-border">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <NextLink href="/" className="flex items-center gap-3 group">
-          <div className="relative w-10 h-10 transition-transform group-hover:scale-110">
+          <div className="relative w-12 h-12 transition-transform group-hover:scale-110">
             {logo && (
               <Image 
                 src={logo.imageUrl} 
                 alt={logo.description} 
-                width={40} 
-                height={40} 
+                width={48} 
+                height={48} 
                 className="object-contain"
                 data-ai-hint={logo.imageHint}
               />
             )}
           </div>
-          <span className="font-headline font-bold text-xl">
+          <span className="font-headline font-bold text-xl hidden sm:inline-block">
             Pelestarian <span className="text-primary">Dayak Ngaju</span>
           </span>
         </NextLink>
