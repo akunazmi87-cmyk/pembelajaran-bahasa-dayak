@@ -1,17 +1,34 @@
 
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Book, MessageSquare, Trophy, Play, Music, Languages, Sparkles, Gamepad2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Book, MessageSquare, Trophy, Play, Music, Languages, Sparkles, Gamepad2, Loader2, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useState } from "react";
+import { useUser, useAuth } from "@/firebase";
+import { signOut } from "firebase/auth";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 
 export default function Home() {
+  const { user, loading } = useUser();
+  const router = useRouter();
+  const auth = useAuth();
   const [isPlaying, setIsPlaying] = useState(false);
   const heroImage = PlaceHolderImages.find(img => img.id === "budaya-dayak");
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push("/login");
+    }
+  }, [user, loading, router]);
+
+  const handleLogout = async () => {
+    await signOut(auth);
+    router.push("/login");
+  };
 
   const toggleWelcomeAudio = () => {
     setIsPlaying(!isPlaying);
@@ -53,12 +70,23 @@ export default function Home() {
     }
   ];
 
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+        <Loader2 className="w-10 h-10 animate-spin text-primary" />
+        <p className="text-muted-foreground font-medium">Memuat halaman...</p>
+      </div>
+    );
+  }
+
+  if (!user) return null;
+
   return (
     <div className="container mx-auto px-4 py-12">
       <section className="text-center mb-16 space-y-6">
         <div className="inline-flex items-center gap-2 bg-primary/5 px-4 py-2 rounded-full text-primary font-bold text-sm mb-4">
           <Sparkles className="w-4 h-4" />
-          Aplikasi Pembelajaran Audio Visual Sederhana
+          Selamat Datang, {user.displayName || 'Murid'}!
         </div>
         <h1 className="text-4xl md:text-7xl font-headline font-bold text-foreground leading-tight">
           Lestarikan Bahasa<br />
@@ -69,7 +97,7 @@ export default function Home() {
           Media belajar interaktif untuk masa depan.
         </p>
         
-        <div className="flex justify-center pt-4">
+        <div className="flex justify-center gap-4 pt-4">
           <Button 
             onClick={toggleWelcomeAudio}
             variant="outline" 
@@ -77,7 +105,15 @@ export default function Home() {
             className="rounded-full h-14 px-8 gap-3 border-primary text-primary hover:bg-primary hover:text-white transition-all shadow-xl font-bold"
           >
             {isPlaying ? <Music className="animate-bounce" /> : <Play />}
-            Dengarkan Sapaan Dayak Ngaju
+            Dengarkan Sapaan
+          </Button>
+          <Button 
+            onClick={handleLogout}
+            variant="ghost" 
+            size="lg" 
+            className="rounded-full h-14 px-8 gap-3 text-destructive hover:bg-destructive/10 font-bold"
+          >
+            <LogOut className="w-5 h-5" /> Logout
           </Button>
         </div>
       </section>
@@ -127,9 +163,6 @@ export default function Home() {
               </li>
             ))}
           </ul>
-          <Button size="lg" className="rounded-full px-8 h-14 text-lg font-bold shadow-lg" asChild>
-            <Link href="/translator">Mulai Belajar Sekarang</Link>
-          </Button>
         </div>
         <div className="relative aspect-[4/3] rounded-3xl overflow-hidden shadow-2xl border-8 border-white">
           {heroImage && (

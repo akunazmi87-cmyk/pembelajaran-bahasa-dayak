@@ -2,9 +2,12 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Book, MessageSquare, Trophy, Home, Languages, Gamepad2, GraduationCap, ShieldCheck } from "lucide-react";
+import { Book, MessageSquare, Trophy, Home, Languages, Gamepad2, GraduationCap, ShieldCheck, LogOut, User } from "lucide-react";
+import { useUser, useAuth } from "@/firebase";
+import { signOut } from "firebase/auth";
+import { Button } from "@/components/ui/button";
 
 const navItems = [
   { name: "Beranda", href: "/", icon: Home },
@@ -17,6 +20,17 @@ const navItems = [
 
 export function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, loading } = useUser();
+  const auth = useAuth();
+
+  const handleLogout = async () => {
+    await signOut(auth);
+    router.push("/login");
+  };
+
+  // Hide nav for login/register
+  if (pathname === "/login" || pathname === "/register") return null;
 
   return (
     <nav className="sticky top-0 z-50 w-full glass-morphism border-b border-border">
@@ -31,7 +45,7 @@ export function Navbar() {
         </Link>
 
         <div className="hidden md:flex items-center gap-4">
-          {navItems.map((item) => (
+          {user && navItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
@@ -44,7 +58,21 @@ export function Navbar() {
               {item.name}
             </Link>
           ))}
+          
           <div className="flex gap-2 ml-4">
+            {user && (
+              <>
+                <Link href="/dashboard">
+                  <Button variant="ghost" size="sm" className="rounded-full gap-2">
+                    <User className="w-4 h-4" /> Profil
+                  </Button>
+                </Link>
+                <Button variant="ghost" size="sm" onClick={handleLogout} className="rounded-full gap-2 text-destructive">
+                  <LogOut className="w-4 h-4" /> Keluar
+                </Button>
+              </>
+            )}
+            
             <Link 
               href="/guru/login" 
               className={cn(
@@ -74,41 +102,30 @@ export function Navbar() {
           </div>
         </div>
 
-        <div className="md:hidden flex items-center gap-1 fixed bottom-0 left-0 right-0 bg-background border-t p-2 justify-around shadow-lg z-50 overflow-x-auto no-scrollbar">
-           {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex flex-col items-center gap-1 text-[9px] font-medium transition-colors min-w-[45px]",
-                pathname === item.href ? "text-primary" : "text-muted-foreground"
-              )}
+        {user && (
+          <div className="md:hidden flex items-center gap-1 fixed bottom-0 left-0 right-0 bg-background border-t p-2 justify-around shadow-lg z-50 overflow-x-auto no-scrollbar">
+            {navItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "flex flex-col items-center gap-1 text-[9px] font-medium transition-colors min-w-[45px]",
+                  pathname === item.href ? "text-primary" : "text-muted-foreground"
+                )}
+              >
+                <item.icon className="w-4 h-4" />
+                {item.name}
+              </Link>
+            ))}
+            <button
+              onClick={handleLogout}
+              className="flex flex-col items-center gap-1 text-[9px] font-medium text-destructive min-w-[45px]"
             >
-              <item.icon className="w-4 h-4" />
-              {item.name}
-            </Link>
-          ))}
-          <Link
-            href="/guru/login"
-            className={cn(
-              "flex flex-col items-center gap-1 text-[9px] font-medium transition-colors min-w-[45px]",
-              pathname.startsWith("/guru") ? "text-primary" : "text-muted-foreground"
-            )}
-          >
-            <GraduationCap className="w-4 h-4" />
-            Guru
-          </Link>
-          <Link
-            href="/admin/login"
-            className={cn(
-              "flex flex-col items-center gap-1 text-[9px] font-medium transition-colors min-w-[45px]",
-              pathname.startsWith("/admin") ? "text-primary" : "text-muted-foreground"
-            )}
-          >
-            <ShieldCheck className="w-4 h-4" />
-            Admin
-          </Link>
-        </div>
+              <LogOut className="w-4 h-4" />
+              Keluar
+            </button>
+          </div>
+        )}
       </div>
     </nav>
   );

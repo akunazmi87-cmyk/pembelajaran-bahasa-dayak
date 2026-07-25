@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { 
   Sparkles, 
   Copy, 
@@ -19,12 +20,14 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { translateDayakNgaju } from "@/ai/flows/dayak-ngaju-translator-flow";
 import { textToSpeech } from "@/ai/flows/text-to-speech-flow";
-import { useCollection, useFirestore } from "@/firebase";
+import { useCollection, useFirestore, useUser } from "@/firebase";
 import { collection } from "firebase/firestore";
 import { INITIAL_VOCABULARY } from "@/lib/data";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function TranslatorPage() {
+  const { user, loading: authLoading } = useUser();
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [inputText, setInputText] = useState("");
   const [result, setResult] = useState<{ indo: string; ngaju: string; source: 'database' | 'ai' } | null>(null);
@@ -36,9 +39,8 @@ export default function TranslatorPage() {
   const { data: dbVocab } = useCollection<any>(vocabQuery);
 
   const combinedVocab = useMemo(() => {
-    if (!mounted) return [];
     return [...(dbVocab || []), ...INITIAL_VOCABULARY];
-  }, [dbVocab, mounted]);
+  }, [dbVocab]);
 
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [isAudioLoading, setIsAudioLoading] = useState(false);
@@ -47,7 +49,10 @@ export default function TranslatorPage() {
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    if (!authLoading && !user) {
+      router.push("/login");
+    }
+  }, [user, authLoading, router]);
 
   const handleTranslate = async () => {
     if (!inputText.trim()) return;
@@ -112,7 +117,11 @@ export default function TranslatorPage() {
     toast({ title: "Berhasil disalin ke papan klip!" });
   };
 
-  if (!mounted) return null;
+  if (!mounted || authLoading || !user) return (
+    <div className="flex items-center justify-center min-h-[60vh]">
+      <Loader2 className="w-10 h-10 animate-spin text-primary" />
+    </div>
+  );
 
   return (
     <div className="container mx-auto px-4 py-12 max-w-4xl">
