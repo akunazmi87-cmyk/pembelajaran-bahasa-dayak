@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -27,7 +26,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!authLoading && user) {
-      router.push('/');
+      router.replace('/');
     }
   }, [user, authLoading, router]);
 
@@ -38,17 +37,19 @@ export default function LoginPage() {
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      router.push('/');
+      router.replace('/');
     } catch (err: any) {
       console.error(err);
-      if (err.code === 'auth/user-not-found') {
-        setError('Email tidak ditemukan atau akun belum terdaftar.');
+      if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+        setError('Email tidak ditemukan atau password salah.');
       } else if (err.code === 'auth/wrong-password') {
         setError('Kata sandi salah. Silakan coba lagi.');
-      } else if (err.code === 'auth/invalid-credential') {
-        setError('Email atau kata sandi salah.');
+      } else if (err.code === 'auth/invalid-email') {
+        setError('Format email tidak valid.');
+      } else if (err.code === 'auth/api-key-not-valid' || err.code === 'auth/invalid-api-key') {
+        setError('Konfigurasi server bermasalah. Pastikan API Key sudah benar.');
       } else {
-        setError('Terjadi kesalahan saat masuk. Silakan coba lagi.');
+        setError('Gagal masuk. Pastikan akun sudah terdaftar.');
       }
     } finally {
       setIsLoading(false);
@@ -77,13 +78,13 @@ export default function LoginPage() {
   return (
     <div className="container mx-auto px-4 py-20 flex justify-center items-center min-h-[80vh]">
       <Card className="w-full max-w-md shadow-2xl border-none">
-        <div className="h-2 bg-green-500 rounded-t-lg" />
+        <div className="h-2 bg-primary rounded-t-lg" />
         <CardHeader className="space-y-1 text-center">
           <div className="mx-auto w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-4">
             <span className="text-2xl font-bold text-primary">DN</span>
           </div>
           <CardTitle className="text-3xl font-headline font-bold text-primary">Masuk ke Akun</CardTitle>
-          <CardDescription>Silakan masuk untuk melanjutkan belajar Bahasa Dayak Ngaju.</CardDescription>
+          <CardDescription>Silakan masuk untuk melanjutkan belajar.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
@@ -117,7 +118,7 @@ export default function LoginPage() {
               </Alert>
             )}
 
-            <Button type="submit" className="w-full h-12 text-lg rounded-full bg-primary hover:bg-primary/90 font-bold shadow-lg" disabled={isLoading}>
+            <Button type="submit" className="w-full h-12 text-lg rounded-full bg-primary font-bold shadow-lg" disabled={isLoading}>
               {isLoading ? <Loader2 className="animate-spin mr-2" /> : <LogIn className="mr-2 h-5 w-5" />} Masuk
             </Button>
           </form>

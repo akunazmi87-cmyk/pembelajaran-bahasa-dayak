@@ -1,38 +1,32 @@
+'use client';
 
-"use client";
-
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import Image from "next/image";
-import { useRouter } from "next/navigation";
-import { Book, MessageSquare, Trophy, Play, Music, Languages, Sparkles, Gamepad2, Loader2, LogOut } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useUser, useAuth } from "@/firebase";
-import { signOut } from "firebase/auth";
-import { PlaceHolderImages } from "@/lib/placeholder-images";
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useUser, useAuth } from '@/firebase';
+import { signOut } from 'firebase/auth';
+import Link from 'next/link';
+import { Book, MessageSquare, Trophy, Languages, Sparkles, Gamepad2, Loader2, LogOut } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function Home() {
   const { user, loading } = useUser();
   const router = useRouter();
   const auth = useAuth();
-  const [isPlaying, setIsPlaying] = useState(false);
-  const heroImage = PlaceHolderImages.find(img => img.id === "budaya-dayak");
 
   useEffect(() => {
     if (!loading && !user) {
-      router.push("/login");
+      router.replace('/login');
     }
   }, [user, loading, router]);
 
   const handleLogout = async () => {
-    await signOut(auth);
-    router.push("/login");
-  };
-
-  const toggleWelcomeAudio = () => {
-    setIsPlaying(!isPlaying);
-    setTimeout(() => setIsPlaying(false), 2000);
+    try {
+      await signOut(auth);
+      router.replace('/login');
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
   };
 
   const modules = [
@@ -74,7 +68,7 @@ export default function Home() {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4">
         <Loader2 className="w-10 h-10 animate-spin text-primary" />
-        <p className="text-muted-foreground font-medium">Memuat halaman...</p>
+        <p className="text-muted-foreground font-medium">Memverifikasi sesi...</p>
       </div>
     );
   }
@@ -99,13 +93,12 @@ export default function Home() {
         
         <div className="flex justify-center gap-4 pt-4">
           <Button 
-            onClick={toggleWelcomeAudio}
-            variant="outline" 
+            asChild
+            variant="default" 
             size="lg" 
-            className="rounded-full h-14 px-8 gap-3 border-primary text-primary hover:bg-primary hover:text-white transition-all shadow-xl font-bold"
+            className="rounded-full h-14 px-8 gap-3 shadow-xl font-bold"
           >
-            {isPlaying ? <Music className="animate-bounce" /> : <Play />}
-            Dengarkan Sapaan
+            <Link href="/vocabulary">Mulai Belajar</Link>
           </Button>
           <Button 
             onClick={handleLogout}
@@ -113,7 +106,7 @@ export default function Home() {
             size="lg" 
             className="rounded-full h-14 px-8 gap-3 text-destructive hover:bg-destructive/10 font-bold"
           >
-            <LogOut className="w-5 h-5" /> Logout
+            <LogOut className="w-5 h-5" /> Keluar
           </Button>
         </div>
       </section>
@@ -140,47 +133,6 @@ export default function Home() {
           </Link>
         ))}
       </div>
-
-      <section className="mt-24 glass-morphism p-12 rounded-[2.5rem] grid grid-cols-1 lg:grid-cols-2 gap-16 items-center shadow-2xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full -mr-32 -mt-32" />
-        <div className="space-y-8 relative z-10">
-          <h2 className="text-4xl font-headline font-bold">
-            Fitur Pembelajaran Audio Visual Sederhana
-          </h2>
-          <ul className="space-y-4">
-            {[
-              "Database terjemahan sapaan yang akurat.",
-              "Dukungan AI untuk menerjemahkan kalimat kompleks.",
-              "Mini game edukasi untuk menghafal kosakata.",
-              "Audio pelafalan asli (TTS) untuk belajar intonasi.",
-              "Latihan soal dan tantangan interaktif."
-            ].map((text, i) => (
-              <li key={i} className="flex items-start gap-4 text-muted-foreground font-medium text-lg">
-                <div className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center flex-shrink-0 mt-0.5 font-bold">
-                  ✓
-                </div>
-                {text}
-              </li>
-            ))}
-          </ul>
-        </div>
-        <div className="relative aspect-[4/3] rounded-3xl overflow-hidden shadow-2xl border-8 border-white">
-          {heroImage && (
-            <Image 
-              src={heroImage.imageUrl} 
-              alt={heroImage.description} 
-              fill
-              className="object-cover transition-transform hover:scale-105 duration-700"
-              data-ai-hint={heroImage.imageHint}
-            />
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end p-8">
-            <p className="text-white font-bold text-xl leading-relaxed italic">
-              "Melestarikan bahasa daerah, menjaga identitas bangsa di era digital."
-            </p>
-          </div>
-        </div>
-      </section>
     </div>
   );
 }
