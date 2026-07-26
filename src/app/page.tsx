@@ -1,12 +1,13 @@
+
 'use client';
 
 import { useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { Book, MessageSquare, Languages, Sparkles, Gamepad2, Users, Trophy } from 'lucide-react';
+import { Book, MessageSquare, Languages, Sparkles, Gamepad2, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useFirestore, useDoc } from '@/firebase';
-import { doc, updateDoc, increment, setDoc, getDoc } from 'firebase/firestore';
+import { doc, runTransaction } from 'firebase/firestore';
 
 export default function Home() {
   const db = useFirestore();
@@ -14,33 +15,37 @@ export default function Home() {
   const { data: stats } = useDoc<any>(statsRef);
 
   useEffect(() => {
-    const checkVisitor = async () => {
+    const trackVisit = async () => {
       // Pastikan kode hanya berjalan di browser
       if (typeof window === 'undefined') return;
 
-      const today = new Date().toISOString().split('T')[0];
-      const lastVisit = localStorage.getItem('last_visit_date');
+      // Gunakan sessionStorage agar setiap sesi baru (orang masuk baru) dihitung
+      const sessionKey = 'site_visited_session';
+      const hasVisitedInSession = sessionStorage.getItem(sessionKey);
 
-      if (lastVisit !== today) {
+      if (!hasVisitedInSession) {
         try {
-          const docSnap = await getDoc(statsRef);
-          if (!docSnap.exists()) {
-            setDoc(statsRef, { totalVisitors: 1 });
-          } else {
-            updateDoc(statsRef, {
-              totalVisitors: increment(1)
-            });
-          }
-          localStorage.setItem('last_visit_date', today);
+          await runTransaction(db, async (transaction) => {
+            const statsDoc = await transaction.get(statsRef);
+            if (!statsDoc.exists()) {
+              transaction.set(statsRef, { totalVisitors: 1 });
+            } else {
+              const currentCount = statsDoc.data().totalVisitors || 0;
+              transaction.update(statsRef, {
+                totalVisitors: currentCount + 1
+              });
+            }
+          });
+          // Tandai bahwa sesi ini sudah dihitung
+          sessionStorage.setItem(sessionKey, 'true');
         } catch (error) {
-          // Gagal memperbarui secara diam-diam agar tidak mengganggu user jika offline
-          console.warn("Visitor counter offline:", error);
+          console.warn("Visitor counter error:", error);
         }
       }
     };
 
-    checkVisitor();
-  }, [statsRef]);
+    trackVisit();
+  }, [db, statsRef]);
 
   const modules = [
     {
