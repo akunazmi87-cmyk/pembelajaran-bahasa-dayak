@@ -2,13 +2,9 @@
 'use client';
 
 import NextLink from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Book, MessageSquare, Trophy, Home, Languages, Gamepad2, GraduationCap, ShieldCheck, LogOut, UserCircle } from "lucide-react";
-import { useAuth, useUser } from "@/firebase";
-import { signOut } from "firebase/auth";
-import { Button } from "@/components/ui/button";
-import { useEffect, useState } from "react";
+import { Book, MessageSquare, Trophy, Home, Languages, Gamepad2 } from "lucide-react";
 
 const navItems = [
   { name: "Beranda", href: "/", icon: Home },
@@ -21,27 +17,6 @@ const navItems = [
 
 export function Navbar() {
   const pathname = usePathname();
-  const router = useRouter();
-  const auth = useAuth();
-  const { user } = useUser();
-  const [guestName, setGuestName] = useState<string | null>(null);
-
-  useEffect(() => {
-    setGuestName(sessionStorage.getItem("guest_name"));
-  }, [pathname]);
-
-  const handleLogout = async () => {
-    if (user) {
-      await signOut(auth);
-    } else {
-      sessionStorage.removeItem("guest_name");
-    }
-    router.push("/welcome");
-  };
-
-  const isAuthPage = pathname.startsWith("/login") || pathname.startsWith("/register") || pathname === "/welcome" || pathname === "/auth/guest";
-
-  if (isAuthPage) return null;
 
   return (
     <nav className="sticky top-0 z-50 w-full glass-morphism border-b border-border shadow-sm">
@@ -69,36 +44,6 @@ export function Navbar() {
               {item.name}
             </NextLink>
           ))}
-          
-          <div className="h-6 w-px bg-border mx-2" />
-
-          <div className="flex items-center gap-3 ml-2">
-            <div className="flex flex-col items-end">
-              <span className="text-xs font-bold text-foreground">
-                {user ? user.displayName || "Siswa" : guestName || "Tamu"}
-              </span>
-              <span className="text-[10px] uppercase tracking-widest font-bold text-primary opacity-70">
-                {user ? "Siswa Terdaftar" : "Sesi Tamu"}
-              </span>
-            </div>
-            
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={handleLogout}
-              className="rounded-full hover:bg-destructive/10 hover:text-destructive text-muted-foreground"
-              title="Keluar"
-            >
-              <LogOut className="w-5 h-5" />
-            </Button>
-          </div>
-        </div>
-
-        {/* Mobile Navigation Toggle (Placeholder for real implementation) */}
-        <div className="md:hidden flex items-center gap-4">
-           <Button variant="ghost" size="icon" onClick={handleLogout} className="text-destructive">
-             <LogOut className="w-5 h-5" />
-           </Button>
         </div>
 
         {/* Mobile Navigation Bar */}

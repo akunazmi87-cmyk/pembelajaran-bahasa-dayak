@@ -2,7 +2,6 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from "react";
-import { useRouter } from "next/navigation";
 import { 
   Sparkles, 
   Copy, 
@@ -20,14 +19,12 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { translateDayakNgaju } from "@/ai/flows/dayak-ngaju-translator-flow";
 import { textToSpeech } from "@/ai/flows/text-to-speech-flow";
-import { useCollection, useFirestore, useUser } from "@/firebase";
+import { useCollection, useFirestore } from "@/firebase";
 import { collection } from "firebase/firestore";
 import { INITIAL_VOCABULARY } from "@/lib/data";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function TranslatorPage() {
-  const { user, loading: authLoading } = useUser();
-  const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [inputText, setInputText] = useState("");
   const [result, setResult] = useState<{ indo: string; ngaju: string; source: 'database' | 'ai' } | null>(null);
@@ -49,10 +46,7 @@ export default function TranslatorPage() {
 
   useEffect(() => {
     setMounted(true);
-    if (!authLoading && !user) {
-      router.push("/login");
-    }
-  }, [user, authLoading, router]);
+  }, []);
 
   const handleTranslate = async () => {
     if (!inputText.trim()) return;
@@ -117,7 +111,7 @@ export default function TranslatorPage() {
     toast({ title: "Berhasil disalin ke papan klip!" });
   };
 
-  if (!mounted || authLoading || !user) return (
+  if (!mounted) return (
     <div className="flex items-center justify-center min-h-[60vh]">
       <Loader2 className="w-10 h-10 animate-spin text-primary" />
     </div>

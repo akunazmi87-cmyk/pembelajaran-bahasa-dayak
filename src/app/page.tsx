@@ -3,18 +3,14 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { Book, MessageSquare, Languages, Sparkles, Gamepad2, Users, AlertCircle } from 'lucide-react';
+import { Book, MessageSquare, Languages, Sparkles, Gamepad2, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useFirestore, useDoc, useUser } from '@/firebase';
+import { useFirestore, useDoc } from '@/firebase';
 import { doc, runTransaction } from 'firebase/firestore';
 
 export default function Home() {
-  const { user, loading } = useUser();
-  const router = useRouter();
   const db = useFirestore();
-  const [guestName, setGuestName] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
 
   const statsRef = useMemo(() => doc(db, 'stats', 'website'), [db]);
@@ -22,13 +18,7 @@ export default function Home() {
 
   useEffect(() => {
     setMounted(true);
-    const sessionGuest = sessionStorage.getItem("guest_name");
-    setGuestName(sessionGuest);
-
-    if (!loading && !user && !sessionGuest) {
-      router.replace("/welcome");
-    }
-  }, [user, loading, router]);
+  }, []);
 
   useEffect(() => {
     if (!mounted) return;
@@ -95,29 +85,10 @@ export default function Home() {
     }
   ];
 
-  if (!mounted || loading || (!user && !guestName)) return null;
+  if (!mounted) return null;
 
   return (
     <div className="container mx-auto px-4 py-12 flex flex-col gap-12">
-      {/* Guest Banner */}
-      {!user && guestName && (
-        <Card className="bg-primary/5 border-primary/20 border-2 overflow-hidden animate-in fade-in slide-in-from-top-4 duration-500">
-          <CardContent className="p-4 flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="bg-primary/10 p-2 rounded-full">
-                <AlertCircle className="w-5 h-5 text-primary" />
-              </div>
-              <p className="text-sm font-medium">
-                Halo, <span className="font-bold text-primary">{guestName}</span>! Anda masuk sebagai tamu. Daftar akun untuk menyimpan progres belajar Anda.
-              </p>
-            </div>
-            <Button asChild size="sm" className="rounded-full font-bold">
-              <Link href="/register">Daftar Sekarang</Link>
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
       <section className="text-center space-y-6">
         <div className="inline-flex items-center gap-2 bg-primary/5 px-4 py-2 rounded-full text-primary font-bold text-sm mb-4">
           <Sparkles className="w-4 h-4" />
@@ -175,7 +146,6 @@ export default function Home() {
         ))}
       </div>
 
-      {/* Visitor Counter Card */}
       <div className="max-w-sm mx-auto w-full">
         <Card className="bg-card border-2 border-primary/10 shadow-xl text-center overflow-hidden">
           <div className="h-1.5 bg-primary/20 w-full" />
