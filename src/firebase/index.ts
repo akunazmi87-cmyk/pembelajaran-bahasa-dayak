@@ -1,8 +1,7 @@
-
 'use client';
 
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { getFirestore, Firestore } from 'firebase/firestore';
+import { getFirestore, Firestore, initializeFirestore } from 'firebase/firestore';
 import { getAuth, Auth } from 'firebase/auth';
 import { getStorage, FirebaseStorage } from 'firebase/storage';
 import { firebaseConfig } from './config';
@@ -14,7 +13,14 @@ export function initializeFirebase(): {
   storage: FirebaseStorage;
 } {
   const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-  const firestore = getFirestore(app);
+  
+  // Menggunakan initializeFirestore dengan settings untuk stabilitas koneksi di lingkungan cloud
+  const firestore = getApps().length > 0 
+    ? getFirestore(app) 
+    : initializeFirestore(app, {
+        experimentalForceLongPolling: true,
+      });
+
   const auth = getAuth(app);
   const storage = getStorage(app);
 

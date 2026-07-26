@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useMemo } from 'react';
@@ -16,6 +15,9 @@ export default function Home() {
 
   useEffect(() => {
     const checkVisitor = async () => {
+      // Pastikan kode hanya berjalan di browser
+      if (typeof window === 'undefined') return;
+
       const today = new Date().toISOString().split('T')[0];
       const lastVisit = localStorage.getItem('last_visit_date');
 
@@ -23,15 +25,16 @@ export default function Home() {
         try {
           const docSnap = await getDoc(statsRef);
           if (!docSnap.exists()) {
-            await setDoc(statsRef, { totalVisitors: 1 });
+            setDoc(statsRef, { totalVisitors: 1 });
           } else {
-            await updateDoc(statsRef, {
+            updateDoc(statsRef, {
               totalVisitors: increment(1)
             });
           }
           localStorage.setItem('last_visit_date', today);
         } catch (error) {
-          console.error("Error updating visitor count:", error);
+          // Gagal memperbarui secara diam-diam agar tidak mengganggu user jika offline
+          console.warn("Visitor counter offline:", error);
         }
       }
     };
