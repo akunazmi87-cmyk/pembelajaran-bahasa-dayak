@@ -21,6 +21,21 @@
         "totalVisitors": { "type": "number" }
       },
       "required": ["totalVisitors"]
+    },
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Profile data for registered students",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "username": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "admin"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "xp": { "type": "number" },
+        "level": { "type": "number" }
+      },
+      "required": ["name", "username", "email", "role"]
     }
   },
   "auth": {
@@ -34,6 +49,10 @@
     "/stats/{statId}": {
       "schema": "#/backend/entities/WebsiteStats",
       "description": "Public statistics collection"
+    },
+    "/users/{userId}": {
+      "schema": "#/backend/entities/UserProfile",
+      "description": "User profile collection"
     }
   }
 }

@@ -1,25 +1,39 @@
 
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Book, MessageSquare, Languages, Sparkles, Gamepad2, Users } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Book, MessageSquare, Languages, Sparkles, Gamepad2, Users, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useFirestore, useDoc } from '@/firebase';
+import { useFirestore, useDoc, useUser } from '@/firebase';
 import { doc, runTransaction } from 'firebase/firestore';
 
 export default function Home() {
+  const { user, loading } = useUser();
+  const router = useRouter();
   const db = useFirestore();
+  const [guestName, setGuestName] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
   const statsRef = useMemo(() => doc(db, 'stats', 'website'), [db]);
   const { data: stats } = useDoc<any>(statsRef);
 
   useEffect(() => {
-    const trackVisit = async () => {
-      // Pastikan kode hanya berjalan di browser
-      if (typeof window === 'undefined') return;
+    setMounted(true);
+    const sessionGuest = sessionStorage.getItem("guest_name");
+    setGuestName(sessionGuest);
 
-      // Gunakan sessionStorage agar setiap sesi baru (orang masuk baru) dihitung
+    if (!loading && !user && !sessionGuest) {
+      router.replace("/welcome");
+    }
+  }, [user, loading, router]);
+
+  useEffect(() => {
+    if (!mounted) return;
+    
+    const trackVisit = async () => {
       const sessionKey = 'site_visited_session';
       const hasVisitedInSession = sessionStorage.getItem(sessionKey);
 
@@ -36,7 +50,6 @@ export default function Home() {
               });
             }
           });
-          // Tandai bahwa sesi ini sudah dihitung
           sessionStorage.setItem(sessionKey, 'true');
         } catch (error) {
           console.warn("Visitor counter error:", error);
@@ -45,7 +58,7 @@ export default function Home() {
     };
 
     trackVisit();
-  }, [db, statsRef]);
+  }, [db, statsRef, mounted]);
 
   const modules = [
     {
@@ -82,12 +95,33 @@ export default function Home() {
     }
   ];
 
+  if (!mounted || loading || (!user && !guestName)) return null;
+
   return (
-    <div className="container mx-auto px-4 py-12 flex flex-col gap-16">
+    <div className="container mx-auto px-4 py-12 flex flex-col gap-12">
+      {/* Guest Banner */}
+      {!user && guestName && (
+        <Card className="bg-primary/5 border-primary/20 border-2 overflow-hidden animate-in fade-in slide-in-from-top-4 duration-500">
+          <CardContent className="p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="bg-primary/10 p-2 rounded-full">
+                <AlertCircle className="w-5 h-5 text-primary" />
+              </div>
+              <p className="text-sm font-medium">
+                Halo, <span className="font-bold text-primary">{guestName}</span>! Anda masuk sebagai tamu. Daftar akun untuk menyimpan progres belajar Anda.
+              </p>
+            </div>
+            <Button asChild size="sm" className="rounded-full font-bold">
+              <Link href="/register">Daftar Sekarang</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       <section className="text-center space-y-6">
         <div className="inline-flex items-center gap-2 bg-primary/5 px-4 py-2 rounded-full text-primary font-bold text-sm mb-4">
           <Sparkles className="w-4 h-4" />
-          Media Belajar Interaktif
+          Platform Belajar Digital
         </div>
         <h1 className="text-4xl md:text-7xl font-headline font-bold text-foreground leading-tight">
           Lestarikan Bahasa<br />
@@ -95,7 +129,7 @@ export default function Home() {
         </h1>
         <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto font-medium leading-relaxed">
           Habaring Hurung - Bergotong Royong Melestarikan Budaya.
-          Platform pembelajaran digital untuk generasi muda Kalimantan Tengah.
+          Media pembelajaran interaktif untuk generasi muda Kalimantan Tengah.
         </p>
         
         <div className="flex justify-center gap-4 pt-4">

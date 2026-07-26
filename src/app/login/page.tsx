@@ -1,26 +1,29 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
-import { useAuth, useUser } from '@/firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { useAuth, useUser, useFirestore } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, LogIn, KeyRound, UserPlus } from 'lucide-react';
+import { Loader2, LogIn, KeyRound, UserPlus, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState(''); // Bisa email atau username
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
   const router = useRouter();
   const auth = useAuth();
+  const db = useFirestore();
   const { user, loading: authLoading } = useUser();
   const { toast } = useToast();
 
@@ -36,20 +39,28 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
+      let email = identifier;
+
+      // Jika input bukan format email, cari email berdasarkan username di Firestore
+      if (!identifier.includes('@')) {
+        const q = query(collection(db, 'users'), where('username', '==', identifier.toLowerCase().trim()));
+        const querySnapshot = await getDocs(q);
+        if (querySnapshot.empty) {
+          throw { code: 'auth/user-not-found' };
+        }
+        email = querySnapshot.docs[0].data().email;
+      }
+
       await signInWithEmailAndPassword(auth, email, password);
       router.replace('/');
     } catch (err: any) {
       console.error(err);
       if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
-        setError('Email tidak ditemukan atau password salah.');
+        setError('Username/Email tidak ditemukan atau password salah.');
       } else if (err.code === 'auth/wrong-password') {
         setError('Kata sandi salah. Silakan coba lagi.');
-      } else if (err.code === 'auth/invalid-email') {
-        setError('Format email tidak valid.');
-      } else if (err.code === 'auth/api-key-not-valid' || err.code === 'auth/invalid-api-key') {
-        setError('Konfigurasi server bermasalah. Pastikan API Key sudah benar.');
       } else {
-        setError('Gagal masuk. Pastikan akun sudah terdaftar.');
+        setError('Gagal masuk. Silakan periksa kembali data Anda.');
       }
     } finally {
       setIsLoading(false);
@@ -57,23 +68,19 @@ export default function LoginPage() {
   };
 
   const handleForgotPassword = async () => {
-    if (!email) {
-      toast({ variant: "destructive", title: "Masukkan email Anda terlebih dahulu" });
+    if (!identifier || !identifier.includes('@')) {
+      toast({ variant: "destructive", title: "Masukkan email valid untuk reset password" });
       return;
     }
     try {
-      await sendPasswordResetEmail(auth, email);
+      await sendPasswordResetEmail(auth, identifier);
       toast({ title: "Email pemulihan terkirim!", description: "Silakan periksa kotak masuk email Anda." });
     } catch (err: any) {
       toast({ variant: "destructive", title: "Gagal mengirim email pemulihan" });
     }
   };
 
-  if (authLoading) return (
-    <div className="flex items-center justify-center min-h-screen">
-      <Loader2 className="w-10 h-10 animate-spin text-primary" />
-    </div>
-  );
+  if (authLoading) return null;
 
   return (
     <div className="container mx-auto px-4 py-20 flex justify-center items-center min-h-[80vh]">
@@ -84,20 +91,19 @@ export default function LoginPage() {
             <span className="text-2xl font-bold text-primary">DN</span>
           </div>
           <CardTitle className="text-3xl font-headline font-bold text-primary">Masuk ke Akun</CardTitle>
-          <CardDescription>Silakan masuk untuk melanjutkan belajar.</CardDescription>
+          <CardDescription>Masukkan email atau username untuk melanjutkan.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="identifier">Email atau Username</Label>
               <Input 
-                id="email"
+                id="identifier"
                 required 
-                type="email" 
-                placeholder="nama@email.com" 
-                value={email} 
-                onChange={e => setEmail(e.target.value)} 
-                className="h-12 border-2 focus-visible:ring-primary"
+                placeholder="nama@email.com atau username" 
+                value={identifier} 
+                onChange={e => setIdentifier(e.target.value)} 
+                className="h-12 border-2 focus-visible:ring-primary font-medium"
               />
             </div>
             <div className="space-y-2">
@@ -113,8 +119,8 @@ export default function LoginPage() {
             </div>
 
             {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
+              <Alert variant="destructive" className="py-2">
+                <AlertDescription className="text-xs font-bold">{error}</AlertDescription>
               </Alert>
             )}
 
@@ -124,13 +130,20 @@ export default function LoginPage() {
           </form>
         </CardContent>
         <CardFooter className="flex flex-col gap-4">
-          <Button variant="link" className="text-primary h-auto p-0" onClick={handleForgotPassword}>
-            <KeyRound className="w-4 h-4 mr-1" /> Lupa kata sandi?
-          </Button>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <div className="flex justify-between w-full">
+            <Button variant="link" className="text-primary h-auto p-0 font-bold" onClick={handleForgotPassword}>
+              Lupa kata sandi?
+            </Button>
+            <Link href="/welcome">
+               <Button variant="link" className="text-muted-foreground h-auto p-0 flex gap-1 items-center">
+                 <ArrowLeft className="w-3 h-3" /> Kembali
+               </Button>
+            </Link>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium">
             Belum punya akun? 
             <Link href="/register">
-              <Button variant="outline" className="rounded-full gap-2 border-primary text-primary hover:bg-primary/5">
+              <Button variant="outline" className="rounded-full gap-2 border-primary text-primary hover:bg-primary/5 h-9">
                 <UserPlus className="w-4 h-4" /> Daftar Akun
               </Button>
             </Link>
