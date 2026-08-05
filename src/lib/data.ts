@@ -147,7 +147,7 @@ export const INITIAL_VOCABULARY = [
   { ngaju: "tande tande", indonesian: "henti henti", category: "Lainya" },
   { ngaju: "balampah", indonesian: "bertapa", category: "Lainya" },
   { ngaju: "palampah", indonesian: "pertama", category: "Lainya" },
-  { ngaju: "mangamuk", indonesian: "mengamuk", category: "Lainya" },
+  { ngaju: "mengamuk", indonesian: "mengamuk", category: "Lainya" },
   { ngaju: "kasiake", indonesian: "keganasan nya", category: "Lainya" },
   { ngaju: "mambalik", indonesian: "membalik", category: "Lainya" },
   { ngaju: "mahampas", indonesian: "menghempas", category: "Lainya" },
@@ -943,37 +943,208 @@ export const INITIAL_VOCABULARY = [
 
 export const CONVERSATIONS = [
   {
-    id: "makan-minum",
-    title: "Makan dan Minum",
+    id: "sekolah-1",
+    category: "Lingkungan Sekolah",
+    title: "Menanyakan Mata Pelajaran",
     dialogues: [
-      { speaker: "A", text: "Salamat kuman.", language: "Dayak Ngaju" },
-      { speaker: "B", text: "Tarima kasih.", language: "Dayak Ngaju" },
-      { speaker: "A", text: "Jangan lupa mihup dan kuman.", language: "Dayak Ngaju" },
-      { speaker: "B", text: "Ie, tarima kasih.", language: "Dayak Ngaju" },
+      { speaker: "A", text: "Narai jadwal palajaran andau tuh?", audio: "" },
+      { speaker: "B", text: "Matematika tuntang Bahasa Indonesia.", audio: "" },
+      { speaker: "A", text: "Oke, tarimakasih.", audio: "" }
     ]
   },
   {
-    id: "belajar-dayak",
-    title: "Belajar Bahasa",
+    id: "sekolah-2",
+    category: "Lingkungan Sekolah",
+    title: "Menanyakan Tugas",
     dialogues: [
-      { speaker: "A", text: "Itah balajar Bahasa Dayak Ngaju.", language: "Dayak Ngaju" },
-      { speaker: "B", text: "Ie, aku balajar.", language: "Dayak Ngaju" },
+      { speaker: "A", text: "Ikau jadi mangarjakan PR kah?", audio: "" },
+      { speaker: "B", text: "Jadi hamalem endau.", audio: "" },
+      { speaker: "B", text: "Ikau pang?", audio: "" },
+      { speaker: "A", text: "Jadi kea.", audio: "" },
+      { speaker: "B", text: "Oh.", audio: "" }
     ]
   },
   {
-    id: "kegiatan-mandui",
-    title: "Kegiatan Mandi",
+    id: "sekolah-3",
+    category: "Lingkungan Sekolah",
+    title: "Meminjam Penggaris",
     dialogues: [
-      { speaker: "A", text: "Andau itah mandui?", language: "Dayak Ngaju" },
-      { speaker: "B", text: "Andau sorenya aku mandui.", language: "Dayak Ngaju" },
+      { speaker: "A", text: "Tau minjam penggaris kah?", audio: "" },
+      { speaker: "B", text: "Iyuh tau.", audio: "" },
+      { speaker: "A", text: "Oke tarimakasih.", audio: "" }
     ]
   },
   {
-    id: "lobby-school",
-    title: "Menyapa di Sekolah",
+    id: "sekolah-4",
+    category: "Lingkungan Sekolah",
+    title: "Menanyakan Upacara",
     dialogues: [
-      { speaker: "Siswa A", text: "Tabe, narai kabar?", language: "Dayak Ngaju" },
-      { speaker: "Siswa B", text: "Kabar bahalap. Ikau narai kabar?", language: "Dayak Ngaju" },
+      { speaker: "A", text: "Jam pire upacara imulai?", audio: "" },
+      { speaker: "B", text: "Jam uju.", audio: "" },
+      { speaker: "A", text: "Oke, kareh itah hayak ih barangkat ah.", audio: "" },
+      { speaker: "B", text: "Oke.", audio: "" }
+    ]
+  },
+  {
+    id: "sekolah-5",
+    category: "Lingkungan Sekolah",
+    title: "Mengajak ke Perpustakaan",
+    dialogues: [
+      { speaker: "A", text: "Ayo itah ka parpustakaan.", audio: "" },
+      { speaker: "B", text: "Yuk sakalian aku handak maminjam buku.", audio: "" },
+      { speaker: "A", text: "Iyuh aku kea.", audio: "" }
+    ]
+  },
+  {
+    id: "rumah-1",
+    category: "Lingkungan Rumah",
+    title: "Membantu Ibu",
+    dialogues: [
+      { speaker: "Ibu", text: "Nak, tolong sapu teras ya.", audio: "" },
+      { speaker: "Anak", text: "Kareh ih.", audio: "" },
+      { speaker: "Ibu", text: "Capati gawi ikau, awi limbah tuh ikau mambuang sampah.", audio: "" },
+      { speaker: "Anak", text: "Iyuh umai.", audio: "" }
+    ]
+  },
+  {
+    id: "rumah-2",
+    category: "Lingkungan Rumah",
+    title: "Meminjam Buku",
+    dialogues: [
+      { speaker: "Kakak", text: "Tau lah aku maminjam buku ikau?", audio: "" },
+      { speaker: "Adik", text: "Tau ih, injagalah.", audio: "" },
+      { speaker: "Kakak", text: "Iyuh.", audio: "" }
+    ]
+  },
+  {
+    id: "rumah-3",
+    category: "Lingkungan Rumah",
+    title: "Mengingatkan Belajar",
+    dialogues: [
+      { speaker: "Ibu", text: "Jangan dia bingat balajar hamalem tuh.", audio: "" },
+      { speaker: "Anak", text: "Iyuh siap umai.", audio: "" },
+      { speaker: "Ibu", text: "Samangat lah balajarah.", audio: "" }
+    ]
+  },
+  {
+    id: "rumah-4",
+    category: "Lingkungan Rumah",
+    title: "Memberi Tahu Ada Tugas Kelompok",
+    dialogues: [
+      { speaker: "Anak", text: "Jewu tege tugas kelompok.", audio: "" },
+      { speaker: "Ayah", text: "Iyuh, karjakan dengan baik lah.", audio: "" },
+      { speaker: "Anak", text: "Siap pak.", audio: "" }
+    ]
+  },
+  {
+    id: "masyarakat-1",
+    category: "Lingkungan Masyarakat",
+    title: "Memberi Kabar",
+    dialogues: [
+      { speaker: "A", text: "Salamat hanjewu pak.", audio: "" },
+      { speaker: "B", text: "Salamat hanjewu.", audio: "" },
+      { speaker: "A", text: "Narai kabar pak?", audio: "" },
+      { speaker: "B", text: "Iyuh sehat bahalapih.", audio: "" }
+    ]
+  },
+  {
+    id: "masyarakat-2",
+    category: "Lingkungan Masyarakat",
+    title: "Menanyakan Kerja Bakti",
+    dialogues: [
+      { speaker: "A", text: "Jewu tege kerja bakti kah?", audio: "" },
+      { speaker: "B", text: "Iyuh mulai te pukul uju.", audio: "" },
+      { speaker: "A", text: "Oke aku tau ih datang pukul uju.", audio: "" }
+    ]
+  },
+  {
+    id: "masyarakat-3",
+    category: "Lingkungan Masyarakat",
+    title: "Bertanya",
+    dialogues: [
+      { speaker: "A", text: "Parmisi, tau batanya lah?", audio: "" },
+      { speaker: "B", text: "Tau silahkan.", audio: "" },
+      { speaker: "B", text: "Handak batanya narai ikau tuh?", audio: "" }
+    ]
+  },
+  {
+    id: "masyarakat-4",
+    category: "Lingkungan Masyarakat",
+    title: "Menanyakan Rapat RT",
+    dialogues: [
+      { speaker: "A", text: "Pea rapat RT hamalem tuh?", audio: "" },
+      { speaker: "B", text: "Jam 8 malem.", audio: "" },
+      { speaker: "A", text: "Tege eweh ih hong kanih?", audio: "" },
+      { speaker: "B", text: "Dengar dengar tege katua RW datang.", audio: "" },
+      { speaker: "A", text: "Oh, tarimakasih lah infonya.", audio: "" }
+    ]
+  },
+  {
+    id: "masyarakat-5",
+    category: "Lingkungan Masyarakat",
+    title: "Ajakan Menjaga Kebersihan",
+    dialogues: [
+      { speaker: "A", text: "Yuk itah manjaga kabarsihan lingkungan.", audio: "" },
+      { speaker: "B", text: "Satuju lingkungan je bersih, mambuat itah barigas.", audio: "" },
+      { speaker: "C", text: "Iyuh betul tutu.", audio: "" }
+    ]
+  },
+  {
+    id: "tanya-1",
+    category: "Tanya Jawab",
+    title: "Apa",
+    dialogues: [
+      { speaker: "A", text: "Narai tugas Bahasa Indonesia andau tuh?", audio: "" },
+      { speaker: "B", text: "Mambuat teks pidato.", audio: "" },
+      { speaker: "A", text: "Tema ah narai?", audio: "" },
+      { speaker: "B", text: "17 Agustus Kamardekaan Bangsa Indonesia.", audio: "" },
+      { speaker: "A", text: "Oke tarimakasih info ah.", audio: "" }
+    ]
+  },
+  {
+    id: "tanya-2",
+    category: "Tanya Jawab",
+    title: "Di Mana",
+    dialogues: [
+      { speaker: "A", text: "Hong kueh ruang parpustakaan?", audio: "" },
+      { speaker: "B", text: "Hong sabalah ruang guru.", audio: "" },
+      { speaker: "A", text: "Oke tarimakasih.", audio: "" }
+    ]
+  },
+  {
+    id: "tanya-3",
+    category: "Tanya Jawab",
+    title: "Kapan",
+    dialogues: [
+      { speaker: "A", text: "Pea ulangan Matematika i laksana?", audio: "" },
+      { speaker: "B", text: "Andau Jumaat.", audio: "" },
+      { speaker: "A", text: "Narai materi ah?", audio: "" },
+      { speaker: "B", text: "Relasi tuntang fungsi.", audio: "" },
+      { speaker: "A", text: "Oke, aku mulai balajar hamalem tuh.", audio: "" }
+    ]
+  },
+  {
+    id: "tanya-4",
+    category: "Tanya Jawab",
+    title: "Siapa",
+    dialogues: [
+      { speaker: "A", text: "Eweh je tapilih manjadi katua OSIS?", audio: "" },
+      { speaker: "B", text: "Aran ah Bahalap je tapilih te.", audio: "" },
+      { speaker: "A", text: "Hong kalas pire ie?", audio: "" },
+      { speaker: "B", text: "7 ruang 11.", audio: "" },
+      { speaker: "A", text: "Oh hebat lah, pire uluh je mamilih ie?", audio: "" },
+      { speaker: "B", text: "665 uluh je mamilih ie.", audio: "" },
+      { speaker: "A", text: "Samoga Amanah dangan tugas je ie emban.", audio: "" }
+    ]
+  },
+  {
+    id: "tanya-5",
+    category: "Tanya Jawab",
+    title: "Mengapa",
+    dialogues: [
+      { speaker: "A", text: "Mbuhen ikau tarlambat datang?", audio: "" },
+      { speaker: "B", text: "Awi ban sapeda ayung kuh bocor.", audio: "" },
+      { speaker: "A", text: "Ouh, samoga jewu dia tarlambat hindai.", audio: "" }
     ]
   }
 ];
