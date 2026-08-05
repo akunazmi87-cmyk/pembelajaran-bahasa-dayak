@@ -31,8 +31,8 @@ export default function Home() {
           await runTransaction(db, async (transaction) => {
             const statsDoc = await transaction.get(statsRef);
             if (!statsDoc.exists()) {
-              // Inisialisasi dengan angka 1.567 sesuai permintaan
-              transaction.set(statsRef, { totalVisitors: 1567 });
+              // Inisialisasi dengan angka 1.374 sesuai permintaan
+              transaction.set(statsRef, { totalVisitors: 1374 });
             } else {
               const currentCount = statsDoc.data().totalVisitors || 0;
               transaction.update(statsRef, {
@@ -156,7 +156,7 @@ export default function Home() {
           </CardHeader>
           <CardContent className="space-y-4 pb-6">
             <div className="text-4xl font-headline font-bold text-primary">
-              {stats?.totalVisitors?.toLocaleString('id-ID') || '1.567'}
+              {stats?.totalVisitors?.toLocaleString('id-ID') || '1.374'}
             </div>
             <p className="text-xs text-muted-foreground font-medium leading-relaxed px-4">
               Terima kasih telah mengunjungi media pembelajaran Bahasa Dayak Ngaju.
