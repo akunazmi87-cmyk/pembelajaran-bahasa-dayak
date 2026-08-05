@@ -86,7 +86,7 @@ export const INITIAL_VOCABULARY = [
   { ngaju: "salamat kuman", indonesian: "Selamat makan", category: "Sapaan" },
   { ngaju: "buah buah", indonesian: "Hati-hati", category: "Sapaan" },
   { ngaju: "manyarak", indonesian: "Menyisir", category: "Kegiatan" },
-  // Data baru dari pengguna
+  // Data dari pengguna (Koleksi Baru)
   { ngaju: "kento", indonesian: "kalian", category: "Lainya" },
   { ngaju: "manyarui", indonesian: "menyisir", category: "Lainya" },
   { ngaju: "sungei", indonesian: "sungai", category: "Lainya" },
